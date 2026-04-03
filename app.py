@@ -117,9 +117,6 @@ st.markdown("""
     .stDataFrame {
         color: #e2e8f0 !important;
     }
-    .custom-slider {
-        margin: 1rem 0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -248,7 +245,13 @@ def get_technical_data(pairs, rsi_period):
             
             # Prezzo attuale
             hist = ticker.history(period='1d')
-            current_price = round(hist['Close'].iloc[-1], 2 if pair == 'XAUUSD' else 5) if not hist.empty else None
+            if not hist.empty:
+                if pair == 'XAUUSD':
+                    current_price = round(hist['Close'].iloc[-1], 2)
+                else:
+                    current_price = round(hist['Close'].iloc[-1], 5)
+            else:
+                current_price = None
             
             # Calcola RSI con periodo personalizzato
             hist_period = ticker.history(period=f'{rsi_period * 3}d')
@@ -272,17 +275,30 @@ def get_technical_data(pairs, rsi_period):
                 pivot = (high + low + close) / 3
                 r1 = 2 * pivot - low
                 s1 = 2 * pivot - high
+                
+                if pair == 'XAUUSD':
+                    pivot = round(pivot, 2)
+                    r1 = round(r1, 2)
+                    s1 = round(s1, 2)
+                else:
+                    pivot = round(pivot, 5)
+                    r1 = round(r1, 5)
+                    s1 = round(s1, 5)
             else:
                 pivot = current_price if current_price else 1.10
-                r1 = pivot * 1.005
-                s1 = pivot * 0.995
+                if pair == 'XAUUSD':
+                    r1 = round(pivot * 1.005, 2)
+                    s1 = round(pivot * 0.995, 2)
+                else:
+                    r1 = round(pivot * 1.005, 5)
+                    s1 = round(pivot * 0.995, 5)
             
             data[pair] = {
                 'price': current_price,
                 'rsi': current_rsi,
-                'pivot': round(pivot, 2 if pair == 'XAUUSD' else 5),
-                'r1': round(r1, 2 if pair == 'XAUUSD' else 5),
-                's1': round(s1, 2 if pair == 'XAUUSD' else 5)
+                'pivot': pivot,
+                'r1': r1,
+                's1': s1
             }
             
         except Exception as e:
@@ -363,20 +379,24 @@ def generate_triple_signals(cot_data, retail_data, technical_data, thresholds):
         
         # Calcola entry, TP, SL solo se segnale valido
         if action and score >= 2:
-            decimals = 2 if pair == 'XAUUSD' else 5
-            
             if action == 'BUY':
                 entry = tech['s1'] if tech['s1'] else tech['price']
                 tp1 = tech['pivot'] if tech['pivot'] else entry * 1.005
                 tp2 = tech['r1'] if tech['r1'] else entry * 1.01
                 sl = entry * 0.995
-                rr = round((tp1 - entry) / (entry - sl), 2) if sl else 0
+                if entry and sl:
+                    rr = round((tp1 - entry) / (entry - sl), 2)
+                else:
+                    rr = 0
             else:
                 entry = tech['r1'] if tech['r1'] else tech['price']
                 tp1 = tech['pivot'] if tech['pivot'] else entry * 0.995
                 tp2 = tech['s1'] if tech['s1'] else entry * 0.99
                 sl = entry * 1.005
-                rr = round((entry - tp1) / (sl - entry), 2) if sl else 0
+                if entry and sl:
+                    rr = round((entry - tp1) / (sl - entry), 2)
+                else:
+                    rr = 0
             
             # Determina forza segnale
             if score == 3:
@@ -410,6 +430,15 @@ def generate_triple_signals(cot_data, retail_data, technical_data, thresholds):
     
     signals.sort(key=lambda x: x['score'], reverse=True)
     return signals
+
+def format_price(pair, value):
+    """Formatta il prezzo in base alla coppia"""
+    if value is None:
+        return "N/A"
+    if pair == 'XAUUSD':
+        return f"{value:.2f}"
+    else:
+        return f"{value:.5f}"
 
 # Main app
 try:
@@ -523,22 +552,22 @@ try:
                     <div>
                         <small style="color: #94a3b8;">Entry</small>
                         <br/>
-                        <strong style="color: white;">{signal['entry']:.5f if signal['pair'] != 'XAUUSD' else signal['entry']:.2f}</strong>
+                        <strong style="color: white;">{format_price(signal['pair'], signal['entry'])}</strong>
                     </div>
                     <div>
                         <small style="color: #94a3b8;">TP1</small>
                         <br/>
-                        <strong style="color: #10b981;">{signal['tp1']:.5f if signal['pair'] != 'XAUUSD' else signal['tp1']:.2f}</strong>
+                        <strong style="color: #10b981;">{format_price(signal['pair'], signal['tp1'])}</strong>
                     </div>
                     <div>
                         <small style="color: #94a3b8;">TP2</small>
                         <br/>
-                        <strong style="color: #10b981;">{signal['tp2']:.5f if signal['pair'] != 'XAUUSD' else signal['tp2']:.2f}</strong>
+                        <strong style="color: #10b981;">{format_price(signal['pair'], signal['tp2'])}</strong>
                     </div>
                     <div>
                         <small style="color: #94a3b8;">SL</small>
                         <br/>
-                        <strong style="color: #ef4444;">{signal['sl']:.5f if signal['pair'] != 'XAUUSD' else signal['sl']:.2f}</strong>
+                        <strong style="color: #ef4444;">{format_price(signal['pair'], signal['sl'])}</strong>
                     </div>
                     <div>
                         <small style="color: #94a3b8;">R:R</small>
@@ -582,9 +611,19 @@ try:
         elif retail.get('short', 0) > retail_short_threshold and cot.get('bias') == 'bullish':
             potential_signal = "🟡 BUY (Doppia)"
         
+        # Formatta prezzo
+        price = tech.get('price')
+        if price:
+            if pair == 'XAUUSD':
+                price_str = f"{price:.2f}"
+            else:
+                price_str = f"{price:.5f}"
+        else:
+            price_str = "N/A"
+        
         summary_data.append({
             'Coppia': pair,
-            'Prezzo': f"{tech.get('price', 'N/A'):.2f}" if pair == 'XAUUSD' else f"{tech.get('price', 'N/A'):.5f}",
+            'Prezzo': price_str,
             f'RSI({rsi_period})': rsi,
             'Retail L/S': f"{retail.get('long', 0)}% / {retail.get('short', 0)}%",
             'COT': cot.get('bias', 'N/A').upper(),
