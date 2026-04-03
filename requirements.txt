@@ -1,9 +1,8 @@
-streamlit==1.29.0
-pandas==2.2.0
-numpy==1.26.4
-yfinance==0.2.40
-plotly==5.24.1
-requests==2.31.0
-beautifulsoup4==4.12.3
-python-dotenv==1.0.1
-fake-useragent==1.5.1
+streamlit
+pandas
+yfinance
+plotly
+requests
+beautifulsoup4
+python-dotenv
+fake-useragent
