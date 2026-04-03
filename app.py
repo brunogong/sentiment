@@ -1,24 +1,20 @@
 import streamlit as st
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime
-import time
-import random
+import numpy as np
 import yfinance as yf
 import plotly.graph_objects as go
-import plotly.express as px
-from datetime import timedelta
+from datetime import datetime, timedelta
+import time
 
 # Configurazione pagina
 st.set_page_config(
-    page_title="Forex Sentinel Pro",
+    page_title="Forex Sentinel Pro - Customizable",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# CSS personalizzato con contrasto ottimale
+# CSS personalizzato
 st.markdown("""
 <style>
     .stApp {
@@ -46,13 +42,17 @@ st.markdown("""
         margin: 0.5rem 0;
         border-left: 4px solid;
         backdrop-filter: blur(10px);
-        color: #ffffff;
     }
-    .signal-buy {
+    .signal-card-strong {
         border-left-color: #10b981;
+        background: rgba(16, 185, 129, 0.15);
     }
-    .signal-sell {
-        border-left-color: #ef4444;
+    .signal-card-moderate {
+        border-left-color: #f59e0b;
+        background: rgba(245, 158, 11, 0.1);
+    }
+    .signal-card-weak {
+        border-left-color: #6b7280;
     }
     .metric-card {
         background: rgba(26, 31, 62, 0.9);
@@ -60,15 +60,9 @@ st.markdown("""
         padding: 1rem;
         text-align: center;
         backdrop-filter: blur(10px);
-        color: #ffffff;
     }
     .metric-card h3 {
         color: white !important;
-        font-weight: 700;
-    }
-    .metric-card p {
-        color: #cbd5e1 !important;
-        font-weight: 500;
     }
     .badge {
         display: inline-block;
@@ -77,102 +71,107 @@ st.markdown("""
         font-size: 0.75rem;
         font-weight: 600;
     }
-    .badge-high {
+    .badge-strong {
         background: rgba(16, 185, 129, 0.3);
         color: #34d399;
         border: 1px solid rgba(16, 185, 129, 0.5);
     }
-    .badge-medium {
+    .badge-moderate {
         background: rgba(245, 158, 11, 0.3);
         color: #fbbf24;
         border: 1px solid rgba(245, 158, 11, 0.5);
     }
-    .badge-low {
+    .badge-weak {
+        background: rgba(107, 114, 128, 0.3);
+        color: #9ca3af;
+        border: 1px solid rgba(107, 114, 128, 0.5);
+    }
+    .rsi-badge {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    .rsi-overbought {
         background: rgba(239, 68, 68, 0.3);
         color: #f87171;
-        border: 1px solid rgba(239, 68, 68, 0.5);
     }
-    /* SIDEBAR - Leggibilità ottimale */
+    .rsi-oversold {
+        background: rgba(16, 185, 129, 0.3);
+        color: #34d399;
+    }
+    .rsi-neutral {
+        background: rgba(107, 114, 128, 0.3);
+        color: #9ca3af;
+    }
     section[data-testid="stSidebar"] {
         background: rgba(19, 24, 58, 0.95);
     }
     section[data-testid="stSidebar"] .stMarkdown {
         color: #cbd5e1 !important;
     }
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 {
+    section[data-testid="stSidebar"] h1, h2, h3 {
         color: #a5b4fc !important;
-        font-weight: 600;
     }
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] li,
-    section[data-testid="stSidebar"] span {
-        color: #cbd5e1 !important;
-    }
-    section[data-testid="stSidebar"] .stButton button {
-        background: #4f46e5;
-        color: white;
-        font-weight: 500;
-        border: none;
-    }
-    section[data-testid="stSidebar"] .stButton button:hover {
-        background: #6366f1;
-    }
-    /* Tabelle */
     .stDataFrame {
         color: #e2e8f0 !important;
     }
-    .stDataFrame td, .stDataFrame th {
-        color: #e2e8f0 !important;
-    }
-    /* Grafici */
-    .js-plotly-plot .main-svg {
-        background: transparent !important;
-    }
-    /* Card dettaglio */
-    .signal-card small {
-        color: #94a3b8 !important;
-        font-weight: 500;
-    }
-    .signal-card strong {
-        color: #f1f5f9 !important;
-    }
-    /* Info box */
-    .stAlert {
-        background: rgba(26, 31, 62, 0.9) !important;
-        color: #e2e8f0 !important;
-    }
-    /* Metriche */
-    div[data-testid="stMetricValue"] {
-        color: #f1f5f9 !important;
-        font-weight: 700;
-    }
-    div[data-testid="stMetricLabel"] {
-        color: #94a3b8 !important;
+    .custom-slider {
+        margin: 1rem 0;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Titolo
+# Header
 st.markdown("""
 <div class="main-header">
-    <h1 style="color: white; margin: 0;">📊 Forex Sentinel Pro</h1>
-    <p style="color: rgba(255,255,255,0.95); margin-top: 0.5rem;">Segnali di Trading basati su COT + Sentiment Retail</p>
+    <h1>📊 Forex Sentinel Pro</h1>
+    <p>Tripla Conferma Personalizzabile: RSI + COT + Sentiment Retail</p>
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar
+# Sidebar con parametri personalizzabili
 with st.sidebar:
-    st.markdown("## ⚙️ Configurazione")
+    st.markdown("## ⚙️ Configurazione Strategia")
     
-    # Coppie forex da monitorare con XAUUSD
-    forex_pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'NZDUSD', 'USDCHF', 'XAUUSD']
+    st.markdown("### 🎯 Soglie Retail Sentiment")
+    retail_long_threshold = st.slider(
+        "Retail LONG > soglia (per SELL)",
+        min_value=60, max_value=85, value=70, step=1,
+        help="Quando i trader retail sono long sopra questa soglia → ipercomprato sentiment"
+    )
     
-    st.markdown("### 📈 Coppie monitorate")
-    for pair in forex_pairs:
-        icon = "🥇" if pair == "XAUUSD" else "💱"
-        st.markdown(f"- {icon} {pair}")
+    retail_short_threshold = st.slider(
+        "Retail SHORT > soglia (per BUY)",
+        min_value=60, max_value=85, value=70, step=1,
+        help="Quando i trader retail sono short sopra questa soglia → ipervenduto sentiment"
+    )
+    
+    st.markdown("---")
+    st.markdown("### 📊 Soglie RSI")
+    
+    rsi_overbought = st.slider(
+        "RSI > soglia (Ipercomprato)",
+        min_value=60, max_value=85, value=70, step=1,
+        help="RSI sopra questo livello indica ipercomprato tecnico"
+    )
+    
+    rsi_oversold = st.slider(
+        "RSI < soglia (Ipervenduto)",
+        min_value=15, max_value=40, value=30, step=1,
+        help="RSI sotto questo livello indica ipervenduto tecnico"
+    )
+    
+    st.markdown("---")
+    st.markdown("### 🏦 Periodo RSI")
+    
+    rsi_period = st.selectbox(
+        "Periodo RSI",
+        options=[7, 14, 21, 30],
+        index=1,
+        help="Periodo standard è 14. Periodi più brevi = più sensibili"
+    )
     
     st.markdown("---")
     st.markdown("### 🔄 Aggiornamento")
@@ -186,28 +185,28 @@ with st.sidebar:
     st.markdown("""
     - **COT**: CFTC (istituzionale)
     - **Sentiment**: Myfxbook (retail)
+    - **RSI**: Yahoo Finance
     - **Prezzi**: Yahoo Finance
     """)
     
     st.markdown("---")
-    st.markdown("### 💡 Strategia")
-    st.markdown("""
-    Segnali generati quando:
-    - COT istituzionale ALLINEATO
-    - Sentiment retail ESTREMO (contrarian)
-    - Livelli tecnici CONFERMANO
-    """)
+    st.markdown("### 💡 Strategia Corrente")
+    st.markdown(f"""
+    **Condizioni SELL:**
+    - Retail LONG > {retail_long_threshold}%
+    - COT Bearish
+    - RSI > {rsi_overbought}
     
-    st.markdown("---")
-    st.markdown("### 🏆 Oro (XAUUSD)")
-    st.markdown("""
-    L'oro è incluso come asset rifugio
+    **Condizioni BUY:**
+    - Retail SHORT > {retail_short_threshold}%
+    - COT Bullish
+    - RSI < {rsi_oversold}
     """)
 
-# Funzioni di caching
+# Funzioni
 @st.cache_data(ttl=3600)
 def get_cot_data():
-    """Simula dati COT (in produzione: scraping CFTC)"""
+    """Dati COT simulati"""
     return {
         'EURUSD': {'bias': 'bullish', 'strength': 'strong', 'long': 62, 'short': 28},
         'GBPUSD': {'bias': 'neutral', 'strength': 'weak', 'long': 45, 'short': 44},
@@ -221,22 +220,23 @@ def get_cot_data():
 
 @st.cache_data(ttl=1800)
 def get_retail_sentiment():
-    """Simula dati Myfxbook (in produzione: scraping)"""
+    """Dati retail sentiment simulati"""
     return {
         'EURUSD': {'long': 42, 'short': 58, 'signal': 'buy', 'extremity': 'moderate'},
         'GBPUSD': {'long': 35, 'short': 65, 'signal': 'buy', 'extremity': 'extreme'},
-        'USDJPY': {'long': 68, 'short': 32, 'signal': 'sell', 'extremity': 'extreme'},
+        'USDJPY': {'long': 72, 'short': 28, 'signal': 'sell', 'extremity': 'extreme'},
         'AUDUSD': {'long': 55, 'short': 45, 'signal': 'neutral', 'extremity': 'moderate'},
         'USDCAD': {'long': 38, 'short': 62, 'signal': 'buy', 'extremity': 'extreme'},
         'NZDUSD': {'long': 48, 'short': 52, 'signal': 'neutral', 'extremity': 'low'},
-        'USDCHF': {'long': 72, 'short': 28, 'signal': 'sell', 'extremity': 'extreme'},
+        'USDCHF': {'long': 75, 'short': 25, 'signal': 'sell', 'extremity': 'extreme'},
         'XAUUSD': {'long': 32, 'short': 68, 'signal': 'buy', 'extremity': 'extreme'}
     }
 
 @st.cache_data(ttl=300)
-def get_current_prices(pairs):
-    """Recupera prezzi da Yahoo Finance"""
-    prices = {}
+def get_technical_data(pairs, rsi_period):
+    """Recupera prezzi e calcola RSI con periodo personalizzabile"""
+    data = {}
+    
     for pair in pairs:
         try:
             if pair == 'XAUUSD':
@@ -245,149 +245,167 @@ def get_current_prices(pairs):
                 symbol = f"{pair}=X"
             
             ticker = yf.Ticker(symbol)
-            data = ticker.history(period='1d')
-            if not data.empty:
-                price = round(data['Close'].iloc[-1], 2) if pair == 'XAUUSD' else round(data['Close'].iloc[-1], 5)
-                prices[pair] = price
+            
+            # Prezzo attuale
+            hist = ticker.history(period='1d')
+            current_price = round(hist['Close'].iloc[-1], 2 if pair == 'XAUUSD' else 5) if not hist.empty else None
+            
+            # Calcola RSI con periodo personalizzato
+            hist_period = ticker.history(period=f'{rsi_period * 3}d')
+            if len(hist_period) >= rsi_period + 1:
+                delta = hist_period['Close'].diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=rsi_period).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=rsi_period).mean()
+                rs = gain / loss
+                rsi = 100 - (100 / (1 + rs))
+                current_rsi = round(rsi.iloc[-1], 1)
             else:
-                prices[pair] = None
-        except Exception as e:
-            print(f"Errore prezzo {pair}: {e}")
-            prices[pair] = None
-        time.sleep(0.5)
-    return prices
-
-def calculate_pivot_levels(pair, current_price):
-    """Calcola pivot points"""
-    try:
-        if pair == 'XAUUSD':
-            symbol = 'GC=F'
-        else:
-            symbol = f"{pair}=X"
-        
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(period='5d')
-        
-        if len(hist) >= 2:
-            yesterday = hist.iloc[-2]
-            high = yesterday['High']
-            low = yesterday['Low']
-            close = yesterday['Close']
+                current_rsi = 50
             
-            pivot = (high + low + close) / 3
-            r1 = 2 * pivot - low
-            s1 = 2 * pivot - high
+            # Calcola pivot points
+            hist_5d = ticker.history(period='5d')
+            if len(hist_5d) >= 2:
+                yesterday = hist_5d.iloc[-2]
+                high = yesterday['High']
+                low = yesterday['Low']
+                close = yesterday['Close']
+                pivot = (high + low + close) / 3
+                r1 = 2 * pivot - low
+                s1 = 2 * pivot - high
+            else:
+                pivot = current_price if current_price else 1.10
+                r1 = pivot * 1.005
+                s1 = pivot * 0.995
             
-            decimals = 2 if pair == 'XAUUSD' else 5
-            
-            return {
-                'pivot': round(pivot, decimals),
-                'r1': round(r1, decimals),
-                's1': round(s1, decimals),
-                'current': current_price
+            data[pair] = {
+                'price': current_price,
+                'rsi': current_rsi,
+                'pivot': round(pivot, 2 if pair == 'XAUUSD' else 5),
+                'r1': round(r1, 2 if pair == 'XAUUSD' else 5),
+                's1': round(s1, 2 if pair == 'XAUUSD' else 5)
             }
-    except:
-        pass
+            
+        except Exception as e:
+            data[pair] = {
+                'price': None,
+                'rsi': 50,
+                'pivot': None,
+                'r1': None,
+                's1': None
+            }
+        
+        time.sleep(0.3)
     
-    if current_price:
-        decimals = 2 if pair == 'XAUUSD' else 5
-        multiplier = 0.005 if pair == 'XAUUSD' else 0.005
-        return {
-            'pivot': current_price,
-            'r1': round(current_price * (1 + multiplier), decimals),
-            's1': round(current_price * (1 - multiplier), decimals),
-            'current': current_price
-        }
-    return None
+    return data
 
-def generate_signals(cot_data, retail_data, prices, levels):
-    """Genera segnali combinati"""
+def generate_triple_signals(cot_data, retail_data, technical_data, thresholds):
+    """Genera segnali con soglie personalizzabili"""
     signals = []
     
     for pair in cot_data.keys():
-        if pair not in retail_data or pair not in levels:
+        if pair not in retail_data or pair not in technical_data:
             continue
         
         cot = cot_data[pair]
         retail = retail_data[pair]
-        level = levels[pair]
-        price = prices.get(pair)
+        tech = technical_data[pair]
         
-        score = 0
-        reasons = []
+        # Inizializza condizioni
+        conditions = {
+            'retail_extreme': False,
+            'cot_aligned': False,
+            'rsi_extreme': False,
+            'direction': None,
+            'details': []
+        }
+        
+        rsi = tech['rsi']
+        
+        # VERIFICA CONDIZIONI PER SELL
+        if retail['long'] > thresholds['retail_long']:
+            conditions['retail_extreme'] = True
+            conditions['direction'] = 'SELL'
+            conditions['details'].append(f"Retail LONG {retail['long']}% > {thresholds['retail_long']}%")
+        
+        if cot['bias'] == 'bearish':
+            conditions['cot_aligned'] = True
+            conditions['details'].append(f"COT Bearish")
+        
+        if rsi > thresholds['rsi_overbought']:
+            conditions['rsi_extreme'] = True
+            conditions['details'].append(f"RSI {rsi} > {thresholds['rsi_overbought']}")
+        
+        # VERIFICA CONDIZIONI PER BUY
+        if retail['short'] > thresholds['retail_short']:
+            conditions['retail_extreme'] = True
+            conditions['direction'] = 'BUY'
+            conditions['details'].append(f"Retail SHORT {retail['short']}% > {thresholds['retail_short']}%")
         
         if cot['bias'] == 'bullish':
-            if cot['strength'] == 'strong':
-                score += 40
-                reasons.append("COT fortemente rialzista")
-            else:
-                score += 25
-                reasons.append("COT moderatamente rialzista")
-        elif cot['bias'] == 'bearish':
-            if cot['strength'] == 'strong':
-                score += 40
-                reasons.append("COT fortemente ribassista")
-            else:
-                score += 25
-                reasons.append("COT moderatamente ribassista")
+            conditions['cot_aligned'] = True
+            conditions['details'].append(f"COT Bullish")
         
-        if retail['signal'] == 'buy':
-            if retail['extremity'] == 'extreme':
-                score += 40
-                reasons.append("Retail estremamente short 📉")
-            else:
-                score += 25
-                reasons.append("Retail short")
-        elif retail['signal'] == 'sell':
-            if retail['extremity'] == 'extreme':
-                score += 40
-                reasons.append("Retail estremamente long 📈")
-            else:
-                score += 25
-                reasons.append("Retail long")
+        if rsi < thresholds['rsi_oversold']:
+            conditions['rsi_extreme'] = True
+            conditions['details'].append(f"RSI {rsi} < {thresholds['rsi_oversold']}")
         
-        if price and level:
-            if price < level['s1']:
-                score += 20
-                reasons.append("Sotto supporto chiave")
-            elif price > level['r1']:
-                score += 20
-                reasons.append("Sopra resistenza chiave")
+        # Calcola punteggio
+        score = sum([
+            conditions['retail_extreme'],
+            conditions['cot_aligned'],
+            conditions['rsi_extreme']
+        ])
         
+        # Determina direzione finale
         action = None
-        if cot['bias'] == 'bullish' and retail['signal'] == 'buy':
-            action = 'BUY'
-        elif cot['bias'] == 'bearish' and retail['signal'] == 'sell':
-            action = 'SELL'
-        elif score > 60:
-            action = 'BUY' if cot['bias'] == 'bullish' else 'SELL'
+        if score >= 2 and conditions['direction']:
+            action = conditions['direction']
         
-        if action and score >= 50:
+        # Calcola entry, TP, SL solo se segnale valido
+        if action and score >= 2:
             decimals = 2 if pair == 'XAUUSD' else 5
-            sl_multiplier = 0.005 if pair == 'XAUUSD' else 0.005
             
             if action == 'BUY':
-                entry = level['s1'] if level['s1'] else price
-                tp = level['pivot'] if level['pivot'] else price * 1.005
-                sl = entry * (1 - sl_multiplier)
-                rr = round((tp - entry) / (entry - sl), 2) if sl else 0
+                entry = tech['s1'] if tech['s1'] else tech['price']
+                tp1 = tech['pivot'] if tech['pivot'] else entry * 1.005
+                tp2 = tech['r1'] if tech['r1'] else entry * 1.01
+                sl = entry * 0.995
+                rr = round((tp1 - entry) / (entry - sl), 2) if sl else 0
             else:
-                entry = level['r1'] if level['r1'] else price
-                tp = level['pivot'] if level['pivot'] else price * 0.995
-                sl = entry * (1 + sl_multiplier)
-                rr = round((entry - tp) / (sl - entry), 2) if sl else 0
+                entry = tech['r1'] if tech['r1'] else tech['price']
+                tp1 = tech['pivot'] if tech['pivot'] else entry * 0.995
+                tp2 = tech['s1'] if tech['s1'] else entry * 0.99
+                sl = entry * 1.005
+                rr = round((entry - tp1) / (sl - entry), 2) if sl else 0
+            
+            # Determina forza segnale
+            if score == 3:
+                strength = "TRIPLA CONFERMA"
+                confidence = "STRONG"
+                card_class = "signal-card-strong"
+            else:
+                strength = "DOPPIA CONFERMA"
+                confidence = "MODERATE"
+                card_class = "signal-card-moderate"
             
             signals.append({
                 'pair': pair,
                 'action': action,
                 'score': score,
-                'confidence': 'HIGH' if score >= 75 else 'MEDIUM' if score >= 60 else 'LOW',
+                'confidence': confidence,
+                'strength': strength,
+                'card_class': card_class,
                 'entry': entry,
-                'tp': tp,
+                'tp1': tp1,
+                'tp2': tp2,
                 'sl': sl,
                 'rr': rr,
-                'reasons': ' | '.join(reasons[:2]),
-                'current_price': price
+                'retail_long': retail['long'],
+                'retail_short': retail['short'],
+                'cot_bias': cot['bias'],
+                'rsi': tech['rsi'],
+                'price': tech['price'],
+                'details': ' | '.join(conditions['details'])
             })
     
     signals.sort(key=lambda x: x['score'], reverse=True)
@@ -395,223 +413,225 @@ def generate_signals(cot_data, retail_data, prices, levels):
 
 # Main app
 try:
-    with st.spinner('Caricamento dati in corso...'):
+    # Configurazione soglie
+    thresholds = {
+        'retail_long': retail_long_threshold,
+        'retail_short': retail_short_threshold,
+        'rsi_overbought': rsi_overbought,
+        'rsi_oversold': rsi_oversold
+    }
+    
+    forex_pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'NZDUSD', 'USDCHF', 'XAUUSD']
+    
+    with st.spinner('Caricamento dati e calcolo segnali...'):
         cot_data = get_cot_data()
         retail_data = get_retail_sentiment()
-        prices = get_current_prices(forex_pairs)
-        
-        levels = {}
-        for pair in forex_pairs:
-            level = calculate_pivot_levels(pair, prices.get(pair))
-            if level:
-                levels[pair] = level
-        
-        signals = generate_signals(cot_data, retail_data, prices, levels)
+        technical_data = get_technical_data(forex_pairs, rsi_period)
+        signals = generate_triple_signals(cot_data, retail_data, technical_data, thresholds)
     
+    # Metriche
     col1, col2, col3, col4 = st.columns(4)
+    
+    triple_signals = [s for s in signals if s['score'] == 3]
+    double_signals = [s for s in signals if s['score'] == 2]
     
     with col1:
         st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin: 0; color: #667eea;">{len(signals)}</h3>
-            <p style="margin: 0; color: #cbd5e1;">Segnali Attivi</p>
+            <h3 style="color: #10b981;">{len(triple_signals)}</h3>
+            <p>🔴🔴🔴 Triple Conferma</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
-        buys = len([s for s in signals if s['action'] == 'BUY'])
         st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin: 0; color: #10b981;">{buys}</h3>
-            <p style="margin: 0; color: #cbd5e1;">Acquisti</p>
+            <h3 style="color: #f59e0b;">{len(double_signals)}</h3>
+            <p>🟡🟡 Doppia Conferma</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
-        sells = len([s for s in signals if s['action'] == 'SELL'])
         st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin: 0; color: #ef4444;">{sells}</h3>
-            <p style="margin: 0; color: #cbd5e1;">Vendite</p>
+            <h3 style="color: #667eea;">{len(signals)}</h3>
+            <p>📊 Segnali Totali</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col4:
-        avg_score = round(sum(s['score'] for s in signals) / len(signals), 1) if signals else 0
+        buys = len([s for s in signals if s['action'] == 'BUY'])
+        sells = len([s for s in signals if s['action'] == 'SELL'])
         st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin: 0; color: #f59e0b;">{avg_score}</h3>
-            <p style="margin: 0; color: #cbd5e1;">Score Medio</p>
+            <h3 style="color: #10b981;">BUY {buys}</h3>
+            <p style="color: #ef4444;">SELL {sells}</p>
         </div>
         """, unsafe_allow_html=True)
     
     st.markdown("---")
-    st.markdown("## 🎯 Segnali di Trading")
+    st.markdown("## 🎯 Segnali Tripla Conferma")
     
     if signals:
-        df_signals = pd.DataFrame(signals)
-        
-        def format_price(pair, value):
-            if value is None:
-                return "N/A"
-            decimals = 2 if pair == 'XAUUSD' else 5
-            return f"{value:.{decimals}f}"
-        
-        df_signals['entry'] = df_signals.apply(lambda x: format_price(x['pair'], x['entry']), axis=1)
-        df_signals['tp'] = df_signals.apply(lambda x: format_price(x['pair'], x['tp']), axis=1)
-        df_signals['sl'] = df_signals.apply(lambda x: format_price(x['pair'], x['sl']), axis=1)
-        
-        def color_action(val):
-            if val == 'BUY':
-                return 'background-color: rgba(16, 185, 129, 0.3); color: #34d399; font-weight: bold;'
-            elif val == 'SELL':
-                return 'background-color: rgba(239, 68, 68, 0.3); color: #f87171; font-weight: bold;'
-            return ''
-        
-        styled_df = df_signals[['pair', 'action', 'confidence', 'entry', 'tp', 'sl', 'rr', 'reasons']].style.map(
-            color_action, subset=['action']
-        )
-        
-        st.dataframe(styled_df, use_container_width=True, height=400)
-        
-        st.markdown("### 📋 Dettaglio Segnali")
-        
-        for signal in signals[:5]:
-            card_class = "signal-card signal-buy" if signal['action'] == 'BUY' else "signal-card signal-sell"
+        for signal in signals:
             badge_class = f"badge badge-{signal['confidence'].lower()}"
-            decimals = 2 if signal['pair'] == 'XAUUSD' else 5
+            
+            # RSI badge
+            if signal['rsi'] > rsi_overbought:
+                rsi_badge = f'<span class="rsi-badge rsi-overbought">🔥 RSI {signal["rsi"]} (Overbought)</span>'
+            elif signal['rsi'] < rsi_oversold:
+                rsi_badge = f'<span class="rsi-badge rsi-oversold">💚 RSI {signal["rsi"]} (Oversold)</span>'
+            else:
+                rsi_badge = f'<span class="rsi-badge rsi-neutral">⚪ RSI {signal["rsi"]} (Neutrale)</span>'
             
             st.markdown(f"""
-            <div class="{card_class}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="signal-card {signal['card_class']}">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
                     <div>
-                        <h3 style="margin: 0; color: #ffffff;">{signal['pair']}</h3>
-                        <span class="{badge_class}">{signal['confidence']} CONFIDENZA</span>
+                        <h2 style="margin: 0; color: white;">{signal['pair']}</h2>
+                        <span class="{badge_class}">{signal['strength']}</span>
                     </div>
                     <div style="text-align: right;">
-                        <h2 style="margin: 0; color: {'#10b981' if signal['action'] == 'BUY' else '#ef4444'}">
+                        <h1 style="margin: 0; color: {'#10b981' if signal['action'] == 'BUY' else '#ef4444'}; font-size: 2rem;">
                             {signal['action']}
-                        </h2>
-                        <span style="font-size: 12px; color: #cbd5e1;">Score: {signal['score']}</span>
+                        </h1>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; padding: 0.75rem; background: rgba(0,0,0,0.3); border-radius: 10px;">
+                    <div style="text-align: center;">
+                        <small style="color: #94a3b8;">🏦 COT</small>
+                        <div style="font-weight: bold; color: {'#10b981' if signal['cot_bias'] == 'bullish' else '#ef4444' if signal['cot_bias'] == 'bearish' else '#f59e0b'}">
+                            {signal['cot_bias'].upper()}
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <small style="color: #94a3b8;">👥 Retail</small>
+                        <div>
+                            <span style="color: #10b981;">L:{signal['retail_long']}%</span> 
+                            <span style="color: #ef4444;">S:{signal['retail_short']}%</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <small style="color: #94a3b8;">📊 RSI ({rsi_period})</small>
+                        <div style="font-weight: bold;">{signal['rsi']}</div>
+                        <div>{rsi_badge}</div>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-top: 0.75rem;">
                     <div>
                         <small style="color: #94a3b8;">Entry</small>
                         <br/>
-                        <strong style="color: #f1f5f9;">{signal['entry']:.{decimals}f}</strong>
+                        <strong style="color: white;">{signal['entry']:.5f if signal['pair'] != 'XAUUSD' else signal['entry']:.2f}</strong>
                     </div>
                     <div>
-                        <small style="color: #94a3b8;">Take Profit</small>
+                        <small style="color: #94a3b8;">TP1</small>
                         <br/>
-                        <strong style="color: #10b981;">{signal['tp']:.{decimals}f}</strong>
+                        <strong style="color: #10b981;">{signal['tp1']:.5f if signal['pair'] != 'XAUUSD' else signal['tp1']:.2f}</strong>
                     </div>
                     <div>
-                        <small style="color: #94a3b8;">Stop Loss</small>
+                        <small style="color: #94a3b8;">TP2</small>
                         <br/>
-                        <strong style="color: #ef4444;">{signal['sl']:.{decimals}f}</strong>
+                        <strong style="color: #10b981;">{signal['tp2']:.5f if signal['pair'] != 'XAUUSD' else signal['tp2']:.2f}</strong>
                     </div>
                     <div>
-                        <small style="color: #94a3b8;">R:R Ratio</small>
+                        <small style="color: #94a3b8;">SL</small>
                         <br/>
-                        <strong style="color: #f1f5f9;">1:{signal['rr']}</strong>
+                        <strong style="color: #ef4444;">{signal['sl']:.5f if signal['pair'] != 'XAUUSD' else signal['sl']:.2f}</strong>
+                    </div>
+                    <div>
+                        <small style="color: #94a3b8;">R:R</small>
+                        <br/>
+                        <strong>1:{signal['rr']}</strong>
                     </div>
                 </div>
-                <div style="margin-top: 0.75rem; font-size: 12px; color: #94a3b8;">
-                    ℹ️ {signal['reasons']}
+                
+                <div style="margin-top: 0.75rem; font-size: 11px; color: #64748b; text-align: center;">
+                    {signal['details']}
                 </div>
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.info("ℹ️ Nessun segnale al momento. Riprova più tardi.")
+        st.info("ℹ️ Nessun segnale con le soglie attuali. Prova ad abbassare le soglie per più segnali.")
     
     st.markdown("---")
     
-    col1, col2 = st.columns(2)
+    # Tabella riassuntiva
+    st.markdown("## 📊 Tabella Riassuntiva")
     
-    with col1:
-        st.markdown("## 🏦 COT Analysis (Istituzionale)")
+    summary_data = []
+    for pair in forex_pairs:
+        cot = cot_data.get(pair, {})
+        retail = retail_data.get(pair, {})
+        tech = technical_data.get(pair, {})
         
-        cot_df = pd.DataFrame([
-            {
-                'Coppia': pair,
-                'Long %': data['long'],
-                'Short %': data['short'],
-                'Bias': '🟢 BULL' if data['bias'] == 'bullish' else '🔴 BEAR' if data['bias'] == 'bearish' else '⚪ NEUTRO'
-            }
-            for pair, data in cot_data.items()
-        ])
-        st.dataframe(cot_df, use_container_width=True, hide_index=True)
+        rsi = tech.get('rsi', 50)
         
-        fig_cot = go.Figure()
-        for pair in list(cot_data.keys())[:5]:
-            fig_cot.add_trace(go.Bar(
-                name=pair,
-                x=['Long', 'Short'],
-                y=[cot_data[pair]['long'], cot_data[pair]['short']],
-                text=[f"{cot_data[pair]['long']}%", f"{cot_data[pair]['short']}%"],
-                textposition='auto',
-                textfont=dict(color='white', size=12)
-            ))
-        fig_cot.update_layout(
-            title=dict(text="Posizionamento Non-Commercial", font=dict(color='white', size=16)),
-            barmode='group',
-            height=400,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font_color='white',
-            legend=dict(font=dict(color='white')),
-            xaxis=dict(title_font=dict(color='white'), tickfont=dict(color='white')),
-            yaxis=dict(title_font=dict(color='white'), tickfont=dict(color='white'))
-        )
-        st.plotly_chart(fig_cot, use_container_width=True)
+        # Determina segnale potenziale con soglie correnti
+        potential_signal = "⚪ ATTESA"
+        
+        # Check SELL
+        if retail.get('long', 0) > retail_long_threshold and cot.get('bias') == 'bearish' and rsi > rsi_overbought:
+            potential_signal = "🔴 SELL (Tripla)"
+        elif retail.get('long', 0) > retail_long_threshold and cot.get('bias') == 'bearish':
+            potential_signal = "🟡 SELL (Doppia)"
+        # Check BUY
+        elif retail.get('short', 0) > retail_short_threshold and cot.get('bias') == 'bullish' and rsi < rsi_oversold:
+            potential_signal = "🟢 BUY (Tripla)"
+        elif retail.get('short', 0) > retail_short_threshold and cot.get('bias') == 'bullish':
+            potential_signal = "🟡 BUY (Doppia)"
+        
+        summary_data.append({
+            'Coppia': pair,
+            'Prezzo': f"{tech.get('price', 'N/A'):.2f}" if pair == 'XAUUSD' else f"{tech.get('price', 'N/A'):.5f}",
+            f'RSI({rsi_period})': rsi,
+            'Retail L/S': f"{retail.get('long', 0)}% / {retail.get('short', 0)}%",
+            'COT': cot.get('bias', 'N/A').upper(),
+            'Segnale': potential_signal
+        })
     
-    with col2:
-        st.markdown("## 👥 Retail Sentiment (Myfxbook)")
-        
-        retail_df = pd.DataFrame([
-            {
-                'Coppia': pair,
-                'Long %': data['long'],
-                'Short %': data['short'],
-                'Segnale': '🟢 BUY' if data['signal'] == 'buy' else '🔴 SELL' if data['signal'] == 'sell' else '⚪ NEUTRO'
-            }
-            for pair, data in retail_data.items()
-        ])
-        st.dataframe(retail_df, use_container_width=True, hide_index=True)
-        
-        fig_retail = go.Figure()
-        for pair in list(retail_data.keys())[:5]:
-            fig_retail.add_trace(go.Bar(
-                name=pair,
-                x=['Long', 'Short'],
-                y=[retail_data[pair]['long'], retail_data[pair]['short']],
-                text=[f"{retail_data[pair]['long']}%", f"{retail_data[pair]['short']}%"],
-                textposition='auto',
-                textfont=dict(color='white', size=12)
-            ))
-        fig_retail.update_layout(
-            title=dict(text="Sentiment Trader Retail", font=dict(color='white', size=16)),
-            barmode='group',
-            height=400,
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            font_color='white',
-            legend=dict(font=dict(color='white')),
-            xaxis=dict(title_font=dict(color='white'), tickfont=dict(color='white')),
-            yaxis=dict(title_font=dict(color='white'), tickfont=dict(color='white'))
-        )
-        st.plotly_chart(fig_retail, use_container_width=True)
+    df_summary = pd.DataFrame(summary_data)
+    st.dataframe(df_summary, use_container_width=True, hide_index=True)
     
+    # Legenda dinamica
+    st.markdown(f"""
+    <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 10px; margin-top: 1rem;">
+        <h4>📖 Legenda Segnali (Soglie Correnti)</h4>
+        <table style="width: 100%; color: #cbd5e1;">
+            <tr>
+                <td>🔴 SELL (Tripla)</td>
+                <td>Retail LONG >{retail_long_threshold}% + COT Bearish + RSI >{rsi_overbought}</td>
+            </tr>
+            <tr>
+                <td>🟢 BUY (Tripla)</td>
+                <td>Retail SHORT >{retail_short_threshold}% + COT Bullish + RSI &lt;{rsi_oversold}</td>
+            </tr>
+            <tr>
+                <td>🟡 Doppia</td>
+                <td>Solo 2 condizioni su 3 sono verificate</td>
+            </tr>
+            <tr>
+                <td>⚪ ATTESA</td>
+                <td>Condizioni non ancora mature</td>
+            </tr>
+        </table>
+        <p style="margin-top: 0.5rem; font-size: 12px; color: #64748b;">
+            💡 Modifica le soglie nella sidebar per ottimizzare la strategia!
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Footer
     st.markdown("---")
     st.markdown(f"""
-    <div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 1rem;">
-        <p>⚠️ <strong>Disclaimer:</strong> I segnali sono generati automaticamente. Non costituiscono consulenza finanziaria.</p>
-        <p>📊 Dati: CFTC COT Report | Myfxbook Sentiment | Yahoo Finance</p>
+    <div style="text-align: center; color: #64748b; font-size: 11px;">
+        <p>⚠️ Disclaimer: I segnali sono generati automaticamente. Non costituiscono consulenza finanziaria.</p>
         <p>🔄 Ultimo aggiornamento: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}</p>
+        <p>📊 RSI Period: {rsi_period} | Retail Long Threshold: {retail_long_threshold}% | Retail Short Threshold: {retail_short_threshold}% | RSI OB: {rsi_overbought} | RSI OS: {rsi_oversold}</p>
     </div>
     """, unsafe_allow_html=True)
 
 except Exception as e:
-    st.error(f"❌ Errore nel caricamento dell'app: {str(e)}")
-    st.info("🔄 Prova a ricaricare la pagina o attendi qualche minuto.")
+    st.error(f"❌ Errore: {str(e)}")
+    st.info("🔄 Ricarica la pagina o attendi qualche minuto.")
