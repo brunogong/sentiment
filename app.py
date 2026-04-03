@@ -118,7 +118,7 @@ with st.sidebar:
     """)
 
 # Funzioni di caching
-@st.cache_data(ttl=3600)  # cache 1 ora
+@st.cache_data(ttl=3600)
 def get_cot_data():
     """Simula dati COT (in produzione: scraping CFTC)"""
     return {
@@ -131,7 +131,7 @@ def get_cot_data():
         'USDCHF': {'bias': 'bearish', 'strength': 'moderate', 'long': 35, 'short': 54}
     }
 
-@st.cache_data(ttl=1800)  # cache 30 minuti
+@st.cache_data(ttl=1800)
 def get_retail_sentiment():
     """Simula dati Myfxbook (in produzione: scraping)"""
     return {
@@ -144,7 +144,7 @@ def get_retail_sentiment():
         'USDCHF': {'long': 72, 'short': 28, 'signal': 'sell', 'extremity': 'extreme'}
     }
 
-@st.cache_data(ttl=300)  # cache 5 minuti
+@st.cache_data(ttl=300)
 def get_current_prices(pairs):
     """Recupera prezzi da Yahoo Finance"""
     prices = {}
@@ -159,7 +159,7 @@ def get_current_prices(pairs):
                 prices[pair] = None
         except:
             prices[pair] = None
-        time.sleep(0.5)  # evita rate limiting
+        time.sleep(0.5)
     return prices
 
 def calculate_pivot_levels(pair, current_price):
@@ -188,7 +188,6 @@ def calculate_pivot_levels(pair, current_price):
     except:
         pass
     
-    # Fallback
     if current_price:
         return {
             'pivot': current_price,
@@ -265,7 +264,6 @@ def generate_signals(cot_data, retail_data, prices, levels):
             action = 'BUY' if cot['bias'] == 'bullish' else 'SELL'
         
         if action and score >= 50:
-            # Calcola entry/TP/SL
             if action == 'BUY':
                 entry = level['s1'] if level['s1'] else price
                 tp = level['pivot'] if level['pivot'] else price * 1.005
@@ -290,66 +288,61 @@ def generate_signals(cot_data, retail_data, prices, levels):
                 'current_price': price
             })
     
-    # Ordina per score
     signals.sort(key=lambda x: x['score'], reverse=True)
     return signals
 
 # Main app
 try:
-    # Mostra spinner durante il caricamento
     with st.spinner('Caricamento dati in corso...'):
-        # Recupera dati
         cot_data = get_cot_data()
         retail_data = get_retail_sentiment()
         prices = get_current_prices(forex_pairs)
         
-        # Calcola livelli
         levels = {}
         for pair in forex_pairs:
             level = calculate_pivot_levels(pair, prices.get(pair))
             if level:
                 levels[pair] = level
         
-        # Genera segnali
         signals = generate_signals(cot_data, retail_data, prices, levels)
     
-    # Metriche in cima
+    # Metriche
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin: 0; color: #667eea;">{}</h3>
+            <h3 style="margin: 0; color: #667eea;">{len(signals)}</h3>
             <p style="margin: 0; color: #a0a5c0;">Segnali Attivi</p>
         </div>
-        """.format(len(signals)), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col2:
         buys = len([s for s in signals if s['action'] == 'BUY'])
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin: 0; color: #10b981;">{}</h3>
+            <h3 style="margin: 0; color: #10b981;">{buys}</h3>
             <p style="margin: 0; color: #a0a5c0;">Acquisti</p>
         </div>
-        """.format(buys), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col3:
         sells = len([s for s in signals if s['action'] == 'SELL'])
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin: 0; color: #ef4444;">{}</h3>
+            <h3 style="margin: 0; color: #ef4444;">{sells}</h3>
             <p style="margin: 0; color: #a0a5c0;">Vendite</p>
         </div>
-        """.format(sells), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     with col4:
         avg_score = round(sum(s['score'] for s in signals) / len(signals), 1) if signals else 0
-        st.markdown("""
+        st.markdown(f"""
         <div class="metric-card">
-            <h3 style="margin: 0; color: #f59e0b;">{}</h3>
+            <h3 style="margin: 0; color: #f59e0b;">{avg_score}</h3>
             <p style="margin: 0; color: #a0a5c0;">Score Medio</p>
         </div>
-        """.format(avg_score), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -357,14 +350,13 @@ try:
     st.markdown("## 🎯 Segnali di Trading")
     
     if signals:
-        # Converti in DataFrame per visualizzazione
         df_signals = pd.DataFrame(signals)
         df_signals['entry'] = df_signals['entry'].apply(lambda x: f"{x:.5f}")
         df_signals['tp'] = df_signals['tp'].apply(lambda x: f"{x:.5f}")
         df_signals['sl'] = df_signals['sl'].apply(lambda x: f"{x:.5f}")
         df_signals['current_price'] = df_signals['current_price'].apply(lambda x: f"{x:.5f}" if x else "N/A")
         
-        # Colori per azione
+        # Versione CORRETTA per pandas 2.x (usa .map invece di .applymap)
         def color_action(val):
             if val == 'BUY':
                 return 'background-color: rgba(16, 185, 129, 0.2)'
@@ -372,16 +364,17 @@ try:
                 return 'background-color: rgba(239, 68, 68, 0.2)'
             return ''
         
-        styled_df = df_signals[['pair', 'action', 'confidence', 'entry', 'tp', 'sl', 'rr', 'reasons']].style.applymap(
+        # USANDO .map() - CORRETTO PER PANDAS 2.x
+        styled_df = df_signals[['pair', 'action', 'confidence', 'entry', 'tp', 'sl', 'rr', 'reasons']].style.map(
             color_action, subset=['action']
         )
         
         st.dataframe(styled_df, use_container_width=True, height=400)
         
-        # Dettaglio segnali con carte
+        # Dettaglio segnali
         st.markdown("### 📋 Dettaglio Segnali")
         
-        for signal in signals[:5]:  # Mostra primi 5
+        for signal in signals[:5]:
             card_class = "signal-card signal-buy" if signal['action'] == 'BUY' else "signal-card signal-sell"
             badge_class = f"badge badge-{signal['confidence'].lower()}"
             
@@ -422,7 +415,7 @@ try:
                     </div>
                 </div>
                 <div style="margin-top: 0.75rem; font-size: 12px; color: #a0a5c0;">
-                    <i class="fas fa-info-circle"></i> {signal['reasons']}
+                    ℹ️ {signal['reasons']}
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -504,14 +497,14 @@ try:
     
     # Footer
     st.markdown("---")
-    st.markdown("""
+    st.markdown(f"""
     <div style="text-align: center; color: #a0a5c0; font-size: 12px; padding: 1rem;">
         <p>⚠️ Disclaimer: I segnali sono generati automaticamente. Non costituiscono consulenza finanziaria. 
         Il trading forex comporta rischi significativi. Opera sempre con consapevolezza.</p>
         <p>📊 Dati: CFTC COT Report | Myfxbook Sentiment | Yahoo Finance</p>
-        <p>🔄 Ultimo aggiornamento: {}</p>
+        <p>🔄 Ultimo aggiornamento: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}</p>
     </div>
-    """.format(datetime.now().strftime("%d/%m/%Y %H:%M:%S")), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 except Exception as e:
     st.error(f"Errore nel caricamento dell'app: {str(e)}")
