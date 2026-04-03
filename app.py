@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS personalizzato
+# CSS personalizzato con contrasto migliorato
 st.markdown("""
 <style>
     .stApp {
@@ -31,13 +31,22 @@ st.markdown("""
         border-radius: 20px;
         margin-bottom: 2rem;
     }
+    .main-header h1 {
+        color: white !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    .main-header p {
+        color: rgba(255,255,255,0.95) !important;
+        font-weight: 500;
+    }
     .signal-card {
-        background: rgba(26, 31, 62, 0.9);
+        background: rgba(26, 31, 62, 0.95);
         border-radius: 15px;
         padding: 1rem;
         margin: 0.5rem 0;
         border-left: 4px solid;
         backdrop-filter: blur(10px);
+        color: #ffffff;
     }
     .signal-buy {
         border-left-color: #10b981;
@@ -46,11 +55,20 @@ st.markdown("""
         border-left-color: #ef4444;
     }
     .metric-card {
-        background: rgba(26, 31, 62, 0.8);
+        background: rgba(26, 31, 62, 0.9);
         border-radius: 15px;
         padding: 1rem;
         text-align: center;
         backdrop-filter: blur(10px);
+        color: #ffffff;
+    }
+    .metric-card h3 {
+        color: white !important;
+        font-weight: 700;
+    }
+    .metric-card p {
+        color: #cbd5e1 !important;
+        font-weight: 500;
     }
     .badge {
         display: inline-block;
@@ -60,16 +78,59 @@ st.markdown("""
         font-weight: 600;
     }
     .badge-high {
-        background: rgba(16, 185, 129, 0.2);
-        color: #10b981;
+        background: rgba(16, 185, 129, 0.3);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.5);
     }
     .badge-medium {
-        background: rgba(245, 158, 11, 0.2);
-        color: #f59e0b;
+        background: rgba(245, 158, 11, 0.3);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.5);
     }
     .badge-low {
-        background: rgba(239, 68, 68, 0.2);
-        color: #ef4444;
+        background: rgba(239, 68, 68, 0.3);
+        color: #f87171;
+        border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+    /* Miglioramento leggibilità sidebar */
+    .sidebar .sidebar-content {
+        background: rgba(19, 24, 58, 0.95);
+    }
+    /* Miglioramento testo nelle tabelle */
+    .stDataFrame {
+        color: #ffffff !important;
+    }
+    .stDataFrame td, .stDataFrame th {
+        color: #ffffff !important;
+    }
+    /* Miglioramento testo nei grafici */
+    .js-plotly-plot .main-svg {
+        background: transparent !important;
+    }
+    /* Testo nei card dettaglio */
+    .signal-card small {
+        color: #cbd5e1 !important;
+        font-weight: 500;
+    }
+    .signal-card strong {
+        color: #ffffff !important;
+    }
+    /* Sidebar text */
+    .css-1d391kg, .css-163ttbj, .stMarkdown {
+        color: #e2e8f0 !important;
+    }
+    /* Miglioramento info box */
+    .stAlert {
+        background: rgba(26, 31, 62, 0.9) !important;
+        color: #ffffff !important;
+    }
+    /* Miglioramento testo nelle metriche */
+    div[data-testid="stMetricValue"] {
+        color: #ffffff !important;
+        font-weight: 700;
+    }
+    div[data-testid="stMetricLabel"] {
+        color: #cbd5e1 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -78,7 +139,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <h1 style="color: white; margin: 0;">📊 Forex Sentinel Pro</h1>
-    <p style="color: rgba(255,255,255,0.9); margin-top: 0.5rem;">Segnali di Trading basati su COT + Sentiment Retail</p>
+    <p style="color: rgba(255,255,255,0.95); margin-top: 0.5rem;">Segnali di Trading basati su COT + Sentiment Retail</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -86,12 +147,13 @@ st.markdown("""
 with st.sidebar:
     st.markdown("## ⚙️ Configurazione")
     
-    # Coppie forex da monitorare
-    forex_pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'NZDUSD', 'USDCHF']
+    # Coppie forex da monitorare - AGGIUNTO XAUUSD
+    forex_pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'NZDUSD', 'USDCHF', 'XAUUSD']
     
     st.markdown("### 📈 Coppie monitorate")
     for pair in forex_pairs:
-        st.markdown(f"- {pair}")
+        icon = "🥇" if pair == "XAUUSD" else "💱"
+        st.markdown(f"- {icon} {pair}")
     
     st.markdown("---")
     st.markdown("### 🔄 Aggiornamento")
@@ -116,6 +178,15 @@ with st.sidebar:
     - Sentiment retail ESTREMO (contrarian)
     - Livelli tecnici CONFERMANO
     """)
+    
+    st.markdown("---")
+    st.markdown("### 🏆 Oro (XAUUSD)")
+    st.markdown("""
+    L'oro è incluso come:
+    - Asset rifugio per eccellenza
+    - Correlazione inversa con USD
+    - Volatilità controllata
+    """)
 
 # Funzioni di caching
 @st.cache_data(ttl=3600)
@@ -128,7 +199,8 @@ def get_cot_data():
         'AUDUSD': {'bias': 'bullish', 'strength': 'strong', 'long': 58, 'short': 29},
         'USDCAD': {'bias': 'neutral', 'strength': 'weak', 'long': 44, 'short': 47},
         'NZDUSD': {'bias': 'bullish', 'strength': 'moderate', 'long': 52, 'short': 38},
-        'USDCHF': {'bias': 'bearish', 'strength': 'moderate', 'long': 35, 'short': 54}
+        'USDCHF': {'bias': 'bearish', 'strength': 'moderate', 'long': 35, 'short': 54},
+        'XAUUSD': {'bias': 'bullish', 'strength': 'strong', 'long': 68, 'short': 22}
     }
 
 @st.cache_data(ttl=1800)
@@ -141,7 +213,8 @@ def get_retail_sentiment():
         'AUDUSD': {'long': 55, 'short': 45, 'signal': 'neutral', 'extremity': 'moderate'},
         'USDCAD': {'long': 38, 'short': 62, 'signal': 'buy', 'extremity': 'extreme'},
         'NZDUSD': {'long': 48, 'short': 52, 'signal': 'neutral', 'extremity': 'low'},
-        'USDCHF': {'long': 72, 'short': 28, 'signal': 'sell', 'extremity': 'extreme'}
+        'USDCHF': {'long': 72, 'short': 28, 'signal': 'sell', 'extremity': 'extreme'},
+        'XAUUSD': {'long': 32, 'short': 68, 'signal': 'buy', 'extremity': 'extreme'}
     }
 
 @st.cache_data(ttl=300)
@@ -150,14 +223,21 @@ def get_current_prices(pairs):
     prices = {}
     for pair in pairs:
         try:
-            symbol = f"{pair}=X"
+            # Gestione speciale per XAUUSD (Gold)
+            if pair == 'XAUUSD':
+                symbol = 'GC=F'  # Gold futures su Yahoo Finance
+            else:
+                symbol = f"{pair}=X"
+            
             ticker = yf.Ticker(symbol)
             data = ticker.history(period='1d')
             if not data.empty:
-                prices[pair] = round(data['Close'].iloc[-1], 5)
+                price = round(data['Close'].iloc[-1], 2) if pair == 'XAUUSD' else round(data['Close'].iloc[-1], 5)
+                prices[pair] = price
             else:
                 prices[pair] = None
-        except:
+        except Exception as e:
+            print(f"Errore prezzo {pair}: {e}")
             prices[pair] = None
         time.sleep(0.5)
     return prices
@@ -165,7 +245,12 @@ def get_current_prices(pairs):
 def calculate_pivot_levels(pair, current_price):
     """Calcola pivot points"""
     try:
-        symbol = f"{pair}=X"
+        # Gestione speciale per XAUUSD
+        if pair == 'XAUUSD':
+            symbol = 'GC=F'
+        else:
+            symbol = f"{pair}=X"
+        
         ticker = yf.Ticker(symbol)
         hist = ticker.history(period='5d')
         
@@ -179,20 +264,26 @@ def calculate_pivot_levels(pair, current_price):
             r1 = 2 * pivot - low
             s1 = 2 * pivot - high
             
+            # Arrotondamento appropriato per l'oro
+            decimals = 2 if pair == 'XAUUSD' else 5
+            
             return {
-                'pivot': round(pivot, 5),
-                'r1': round(r1, 5),
-                's1': round(s1, 5),
+                'pivot': round(pivot, decimals),
+                'r1': round(r1, decimals),
+                's1': round(s1, decimals),
                 'current': current_price
             }
     except:
         pass
     
+    # Fallback
     if current_price:
+        decimals = 2 if pair == 'XAUUSD' else 5
+        multiplier = 0.005 if pair == 'XAUUSD' else 0.005
         return {
             'pivot': current_price,
-            'r1': round(current_price * 1.005, 5),
-            's1': round(current_price * 0.995, 5),
+            'r1': round(current_price * (1 + multiplier), decimals),
+            's1': round(current_price * (1 - multiplier), decimals),
             'current': current_price
         }
     return None
@@ -264,15 +355,18 @@ def generate_signals(cot_data, retail_data, prices, levels):
             action = 'BUY' if cot['bias'] == 'bullish' else 'SELL'
         
         if action and score >= 50:
+            decimals = 2 if pair == 'XAUUSD' else 5
+            sl_multiplier = 0.005 if pair == 'XAUUSD' else 0.005
+            
             if action == 'BUY':
                 entry = level['s1'] if level['s1'] else price
                 tp = level['pivot'] if level['pivot'] else price * 1.005
-                sl = entry * 0.995
+                sl = entry * (1 - sl_multiplier)
                 rr = round((tp - entry) / (entry - sl), 2) if sl else 0
             else:
                 entry = level['r1'] if level['r1'] else price
                 tp = level['pivot'] if level['pivot'] else price * 0.995
-                sl = entry * 1.005
+                sl = entry * (1 + sl_multiplier)
                 rr = round((entry - tp) / (sl - entry), 2) if sl else 0
             
             signals.append({
@@ -313,7 +407,7 @@ try:
         st.markdown(f"""
         <div class="metric-card">
             <h3 style="margin: 0; color: #667eea;">{len(signals)}</h3>
-            <p style="margin: 0; color: #a0a5c0;">Segnali Attivi</p>
+            <p style="margin: 0; color: #cbd5e1;">Segnali Attivi</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -322,7 +416,7 @@ try:
         st.markdown(f"""
         <div class="metric-card">
             <h3 style="margin: 0; color: #10b981;">{buys}</h3>
-            <p style="margin: 0; color: #a0a5c0;">Acquisti</p>
+            <p style="margin: 0; color: #cbd5e1;">Acquisti</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -331,7 +425,7 @@ try:
         st.markdown(f"""
         <div class="metric-card">
             <h3 style="margin: 0; color: #ef4444;">{sells}</h3>
-            <p style="margin: 0; color: #a0a5c0;">Vendite</p>
+            <p style="margin: 0; color: #cbd5e1;">Vendite</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -340,7 +434,7 @@ try:
         st.markdown(f"""
         <div class="metric-card">
             <h3 style="margin: 0; color: #f59e0b;">{avg_score}</h3>
-            <p style="margin: 0; color: #a0a5c0;">Score Medio</p>
+            <p style="margin: 0; color: #cbd5e1;">Score Medio</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -351,20 +445,26 @@ try:
     
     if signals:
         df_signals = pd.DataFrame(signals)
-        df_signals['entry'] = df_signals['entry'].apply(lambda x: f"{x:.5f}")
-        df_signals['tp'] = df_signals['tp'].apply(lambda x: f"{x:.5f}")
-        df_signals['sl'] = df_signals['sl'].apply(lambda x: f"{x:.5f}")
-        df_signals['current_price'] = df_signals['current_price'].apply(lambda x: f"{x:.5f}" if x else "N/A")
         
-        # Versione CORRETTA per pandas 2.x (usa .map invece di .applymap)
+        # Formattazione appropriata per XAUUSD
+        def format_price(pair, value):
+            if value is None:
+                return "N/A"
+            decimals = 2 if pair == 'XAUUSD' else 5
+            return f"{value:.{decimals}f}"
+        
+        df_signals['entry'] = df_signals.apply(lambda x: format_price(x['pair'], x['entry']), axis=1)
+        df_signals['tp'] = df_signals.apply(lambda x: format_price(x['pair'], x['tp']), axis=1)
+        df_signals['sl'] = df_signals.apply(lambda x: format_price(x['pair'], x['sl']), axis=1)
+        
+        # Versione CORRETTA per pandas 2.x
         def color_action(val):
             if val == 'BUY':
-                return 'background-color: rgba(16, 185, 129, 0.2)'
+                return 'background-color: rgba(16, 185, 129, 0.3); color: #34d399; font-weight: bold;'
             elif val == 'SELL':
-                return 'background-color: rgba(239, 68, 68, 0.2)'
+                return 'background-color: rgba(239, 68, 68, 0.3); color: #f87171; font-weight: bold;'
             return ''
         
-        # USANDO .map() - CORRETTO PER PANDAS 2.x
         styled_df = df_signals[['pair', 'action', 'confidence', 'entry', 'tp', 'sl', 'rr', 'reasons']].style.map(
             color_action, subset=['action']
         )
@@ -378,49 +478,52 @@ try:
             card_class = "signal-card signal-buy" if signal['action'] == 'BUY' else "signal-card signal-sell"
             badge_class = f"badge badge-{signal['confidence'].lower()}"
             
+            # Formattazione prezzi per XAUUSD
+            decimals = 2 if signal['pair'] == 'XAUUSD' else 5
+            
             st.markdown(f"""
             <div class="{card_class}">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h3 style="margin: 0;">{signal['pair']}</h3>
+                        <h3 style="margin: 0; color: #ffffff;">{signal['pair']}</h3>
                         <span class="{badge_class}">{signal['confidence']} CONFIDENZA</span>
                     </div>
                     <div style="text-align: right;">
                         <h2 style="margin: 0; color: {'#10b981' if signal['action'] == 'BUY' else '#ef4444'}">
                             {signal['action']}
                         </h2>
-                        <span style="font-size: 12px;">Score: {signal['score']}</span>
+                        <span style="font-size: 12px; color: #cbd5e1;">Score: {signal['score']}</span>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
                     <div>
-                        <small style="color: #a0a5c0;">Entry</small>
+                        <small style="color: #cbd5e1;">Entry</small>
                         <br/>
-                        <strong>{signal['entry']:.5f}</strong>
+                        <strong style="color: #ffffff;">{signal['entry']:.{decimals}f}</strong>
                     </div>
                     <div>
-                        <small style="color: #a0a5c0;">Take Profit</small>
+                        <small style="color: #cbd5e1;">Take Profit</small>
                         <br/>
-                        <strong style="color: #10b981;">{signal['tp']:.5f}</strong>
+                        <strong style="color: #10b981;">{signal['tp']:.{decimals}f}</strong>
                     </div>
                     <div>
-                        <small style="color: #a0a5c0;">Stop Loss</small>
+                        <small style="color: #cbd5e1;">Stop Loss</small>
                         <br/>
-                        <strong style="color: #ef4444;">{signal['sl']:.5f}</strong>
+                        <strong style="color: #ef4444;">{signal['sl']:.{decimals}f}</strong>
                     </div>
                     <div>
-                        <small style="color: #a0a5c0;">R:R Ratio</small>
+                        <small style="color: #cbd5e1;">R:R Ratio</small>
                         <br/>
-                        <strong>1:{signal['rr']}</strong>
+                        <strong style="color: #ffffff;">1:{signal['rr']}</strong>
                     </div>
                 </div>
-                <div style="margin-top: 0.75rem; font-size: 12px; color: #a0a5c0;">
+                <div style="margin-top: 0.75rem; font-size: 12px; color: #cbd5e1;">
                     ℹ️ {signal['reasons']}
                 </div>
             </div>
             """, unsafe_allow_html=True)
     else:
-        st.info("Nessun segnale al momento. Riprova più tardi.")
+        st.info("ℹ️ Nessun segnale al momento. Riprova più tardi.")
     
     st.markdown("---")
     
@@ -449,15 +552,19 @@ try:
                 x=['Long', 'Short'],
                 y=[cot_data[pair]['long'], cot_data[pair]['short']],
                 text=[f"{cot_data[pair]['long']}%", f"{cot_data[pair]['short']}%"],
-                textposition='auto'
+                textposition='auto',
+                textfont=dict(color='white', size=12)
             ))
         fig_cot.update_layout(
-            title="Posizionamento Non-Commercial",
+            title=dict(text="Posizionamento Non-Commercial", font=dict(color='white', size=16)),
             barmode='group',
             height=400,
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
-            font_color='white'
+            font_color='white',
+            legend=dict(font=dict(color='white')),
+            xaxis=dict(title_font=dict(color='white'), tickfont=dict(color='white')),
+            yaxis=dict(title_font=dict(color='white'), tickfont=dict(color='white'))
         )
         st.plotly_chart(fig_cot, use_container_width=True)
     
@@ -483,29 +590,34 @@ try:
                 x=['Long', 'Short'],
                 y=[retail_data[pair]['long'], retail_data[pair]['short']],
                 text=[f"{retail_data[pair]['long']}%", f"{retail_data[pair]['short']}%"],
-                textposition='auto'
+                textposition='auto',
+                textfont=dict(color='white', size=12)
             ))
         fig_retail.update_layout(
-            title="Sentiment Trader Retail",
+            title=dict(text="Sentiment Trader Retail", font=dict(color='white', size=16)),
             barmode='group',
             height=400,
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)',
-            font_color='white'
+            font_color='white',
+            legend=dict(font=dict(color='white')),
+            xaxis=dict(title_font=dict(color='white'), tickfont=dict(color='white')),
+            yaxis=dict(title_font=dict(color='white'), tickfont=dict(color='white'))
         )
         st.plotly_chart(fig_retail, use_container_width=True)
     
     # Footer
     st.markdown("---")
     st.markdown(f"""
-    <div style="text-align: center; color: #a0a5c0; font-size: 12px; padding: 1rem;">
-        <p>⚠️ Disclaimer: I segnali sono generati automaticamente. Non costituiscono consulenza finanziaria. 
-        Il trading forex comporta rischi significativi. Opera sempre con consapevolezza.</p>
+    <div style="text-align: center; color: #cbd5e1; font-size: 12px; padding: 1rem;">
+        <p>⚠️ <strong>Disclaimer:</strong> I segnali sono generati automaticamente. Non costituiscono consulenza finanziaria. 
+        Il trading forex e metalli comporta rischi significativi. Opera sempre con consapevolezza.</p>
         <p>📊 Dati: CFTC COT Report | Myfxbook Sentiment | Yahoo Finance</p>
         <p>🔄 Ultimo aggiornamento: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}</p>
+        <p style="color: #667eea;">🏆 XAUUSD (Oro) incluso nell'analisi</p>
     </div>
     """, unsafe_allow_html=True)
 
 except Exception as e:
-    st.error(f"Errore nel caricamento dell'app: {str(e)}")
-    st.info("Prova a ricaricare la pagina o attendi qualche minuto.")
+    st.error(f"❌ Errore nel caricamento dell'app: {str(e)}")
+    st.info("🔄 Prova a ricaricare la pagina o attendi qualche minuto.")
