@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import yfinance as yf
-import plotly.graph_objects as go
 from datetime import datetime
 import time
+import plotly.graph_objects as go
 
 # Configurazione pagina
 st.set_page_config(
@@ -14,174 +14,58 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS completo con contrasto ottimale
+# CSS solo per colori di base (nessun HTML complesso)
 st.markdown("""
 <style>
+    /* Solo colori di base - niente HTML personalizzato */
     .stApp {
-        background: linear-gradient(135deg, #0a0e27 0%, #13183a 100%);
+        background: #0a0e27;
     }
-    .main-header {
-        text-align: center;
-        padding: 2rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 20px;
-        margin-bottom: 2rem;
-    }
-    .main-header h1 {
-        color: white !important;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        font-size: 2.5rem;
-    }
-    .main-header p {
-        color: rgba(255,255,255,0.95) !important;
-        font-size: 1.1rem;
-    }
-    .signal-card {
-        background: rgba(26, 31, 62, 0.95);
-        border-radius: 15px;
-        padding: 1.25rem;
-        margin: 0.75rem 0;
-        border-left: 5px solid;
-        backdrop-filter: blur(10px);
-    }
-    .signal-card-strong {
-        border-left-color: #10b981;
-        background: rgba(16, 185, 129, 0.12);
-    }
-    .signal-card-moderate {
-        border-left-color: #f59e0b;
-        background: rgba(245, 158, 11, 0.1);
-    }
-    .metric-card {
-        background: rgba(26, 31, 62, 0.9);
-        border-radius: 15px;
-        padding: 1.25rem;
-        text-align: center;
-        backdrop-filter: blur(10px);
-    }
-    .metric-card h3 {
-        color: white !important;
-        font-size: 2rem;
-        margin: 0;
-    }
-    .metric-card p {
-        color: #cbd5e1 !important;
-        margin: 0;
-        font-size: 0.9rem;
-    }
-    .badge {
-        display: inline-block;
-        padding: 0.3rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    .badge-strong {
-        background: rgba(16, 185, 129, 0.25);
-        color: #34d399;
-        border: 1px solid rgba(16, 185, 129, 0.5);
-    }
-    .badge-moderate {
-        background: rgba(245, 158, 11, 0.25);
-        color: #fbbf24;
-        border: 1px solid rgba(245, 158, 11, 0.5);
-    }
-    .rsi-badge {
-        display: inline-block;
-        padding: 0.2rem 0.6rem;
-        border-radius: 10px;
-        font-size: 0.7rem;
-        font-weight: 600;
-    }
-    .rsi-overbought {
-        background: rgba(239, 68, 68, 0.3);
-        color: #f87171;
-    }
-    .rsi-oversold {
-        background: rgba(16, 185, 129, 0.3);
-        color: #34d399;
-    }
-    .rsi-neutral {
-        background: rgba(107, 114, 128, 0.3);
-        color: #9ca3af;
-    }
-    /* Sidebar leggibile */
     section[data-testid="stSidebar"] {
-        background: rgba(19, 24, 58, 0.97);
+        background: #13183a;
     }
-    section[data-testid="stSidebar"] .stMarkdown {
+    .stMarkdown, .stText, .stDataFrame {
         color: #e2e8f0 !important;
     }
-    section[data-testid="stSidebar"] h1, 
-    section[data-testid="stSidebar"] h2, 
-    section[data-testid="stSidebar"] h3 {
+    h1, h2, h3, h4, h5, h6 {
         color: #a5b4fc !important;
     }
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] li {
-        color: #cbd5e1 !important;
-    }
-    .stDataFrame {
-        color: #e2e8f0 !important;
-    }
-    .stDataFrame thead th {
-        color: #a5b4fc !important;
-        background: rgba(26, 31, 62, 0.8) !important;
-    }
-    .stDataFrame tbody td {
-        color: #cbd5e1 !important;
-    }
-    /* Testo generale */
-    .stMarkdown {
-        color: #e2e8f0 !important;
-    }
-    label, .stSelectbox label, .stSlider label {
+    .st-bb {
         color: #cbd5e1 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# Header
-st.markdown("""
-<div class="main-header">
-    <h1>📊 Forex Sentinel Pro</h1>
-    <p>Tripla Conferma Personalizzabile: RSI + COT + Sentiment Retail</p>
-</div>
-""", unsafe_allow_html=True)
+# Header con st.markdown semplice
+st.markdown("# 📊 Forex Sentinel Pro")
+st.markdown("### Tripla Conferma: RSI + COT + Sentiment Retail")
+st.markdown("---")
 
 # Sidebar
 with st.sidebar:
-    st.markdown("## ⚙️ Configurazione Strategia")
+    st.markdown("## ⚙️ Configurazione")
     
-    st.markdown("### 🎯 Soglie Retail Sentiment")
-    retail_long_threshold = st.slider(
-        "Retail LONG > soglia (per SELL)",
-        min_value=60, max_value=85, value=70, step=1
-    )
-    retail_short_threshold = st.slider(
-        "Retail SHORT > soglia (per BUY)",
-        min_value=60, max_value=85, value=70, step=1
-    )
-    
+    retail_long_threshold = st.slider("📈 Retail LONG > soglia (per SELL)", 60, 85, 70)
+    retail_short_threshold = st.slider("📉 Retail SHORT > soglia (per BUY)", 60, 85, 70)
     st.markdown("---")
-    st.markdown("### 📊 Soglie RSI")
-    rsi_overbought = st.slider("RSI > soglia (Ipercomprato)", 60, 85, 70)
-    rsi_oversold = st.slider("RSI < soglia (Ipervenduto)", 15, 40, 30)
-    rsi_period = st.selectbox("Periodo RSI", [7, 14, 21, 30], index=1)
-    
+    rsi_overbought = st.slider("🔥 RSI > soglia (Ipercomprato)", 60, 85, 70)
+    rsi_oversold = st.slider("💚 RSI < soglia (Ipervenduto)", 15, 40, 30)
+    rsi_period = st.selectbox("📊 Periodo RSI", [7, 14, 21, 30], index=1)
     st.markdown("---")
-    if st.button("🔄 Aggiorna Dati", type="primary", use_container_width=True):
+    
+    if st.button("🔄 Aggiorna Dati", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
     
     st.markdown("---")
+    st.markdown("### 🎯 Strategia Corrente")
     st.markdown(f"""
-    **Condizioni SELL:**
+    **SELL (Tripla):**
     - Retail LONG > {retail_long_threshold}%
     - COT Bearish
     - RSI > {rsi_overbought}
     
-    **Condizioni BUY:**
+    **BUY (Tripla):**
     - Retail SHORT > {retail_short_threshold}%
     - COT Bullish
     - RSI < {rsi_oversold}
@@ -223,10 +107,7 @@ def get_technical_data(pairs, rsi_period):
             ticker = yf.Ticker(symbol)
             
             hist = ticker.history(period='1d')
-            if not hist.empty:
-                price = round(hist['Close'].iloc[-1], 2 if pair == 'XAUUSD' else 5)
-            else:
-                price = None
+            price = round(hist['Close'].iloc[-1], 2 if pair == 'XAUUSD' else 5) if not hist.empty else None
             
             hist_rsi = ticker.history(period=f'{max(rsi_period * 3, 30)}d')
             if len(hist_rsi) >= rsi_period + 1:
@@ -258,14 +139,8 @@ def get_technical_data(pairs, rsi_period):
                     r1 = round(pivot * 1.005, 5)
                     s1 = round(pivot * 0.995, 5)
             
-            data[pair] = {
-                'price': price,
-                'rsi': current_rsi,
-                'pivot': pivot,
-                'r1': r1,
-                's1': s1
-            }
-        except Exception as e:
+            data[pair] = {'price': price, 'rsi': current_rsi, 'pivot': pivot, 'r1': r1, 's1': s1}
+        except:
             data[pair] = {'price': None, 'rsi': 50, 'pivot': None, 'r1': None, 's1': None}
         time.sleep(0.3)
     return data
@@ -287,31 +162,36 @@ def generate_signals(cot_data, retail_data, tech_data, thresholds):
         retail = retail_data[pair]
         tech = tech_data[pair]
         
-        conditions = []
-        action = None
-        
         # Check SELL
+        sell_conditions = []
         if retail['long'] > thresholds['retail_long']:
-            conditions.append(f"📊 Retail LONG {retail['long']}% > {thresholds['retail_long']}%")
-            if cot['bias'] == 'bearish':
-                conditions.append(f"🏦 COT Bearish")
-            if tech['rsi'] > thresholds['rsi_overbought']:
-                conditions.append(f"📈 RSI {tech['rsi']} > {thresholds['rsi_overbought']}")
-            
-            if len([c for c in conditions if 'COT' in c or 'RSI' in c]) >= 2:
-                action = 'SELL'
+            sell_conditions.append("Retail LONG")
+        if cot['bias'] == 'bearish':
+            sell_conditions.append("COT Bearish")
+        if tech['rsi'] > thresholds['rsi_overbought']:
+            sell_conditions.append("RSI Overbought")
         
-        # Reset per BUY
-        conditions = []
+        # Check BUY
+        buy_conditions = []
         if retail['short'] > thresholds['retail_short']:
-            conditions.append(f"📊 Retail SHORT {retail['short']}% > {thresholds['retail_short']}%")
-            if cot['bias'] == 'bullish':
-                conditions.append(f"🏦 COT Bullish")
-            if tech['rsi'] < thresholds['rsi_oversold']:
-                conditions.append(f"📉 RSI {tech['rsi']} < {thresholds['rsi_oversold']}")
-            
-            if len([c for c in conditions if 'COT' in c or 'RSI' in c]) >= 2:
-                action = 'BUY'
+            buy_conditions.append("Retail SHORT")
+        if cot['bias'] == 'bullish':
+            buy_conditions.append("COT Bullish")
+        if tech['rsi'] < thresholds['rsi_oversold']:
+            buy_conditions.append("RSI Oversold")
+        
+        action = None
+        conditions = []
+        score = 0
+        
+        if len(sell_conditions) >= 2:
+            action = 'SELL'
+            conditions = sell_conditions
+            score = len(sell_conditions)
+        elif len(buy_conditions) >= 2:
+            action = 'BUY'
+            conditions = buy_conditions
+            score = len(buy_conditions)
         
         if action:
             if action == 'BUY':
@@ -324,13 +204,12 @@ def generate_signals(cot_data, retail_data, tech_data, thresholds):
                 sl = entry * 1.005 if entry else None
             
             rr = round(abs((tp - entry) / (entry - sl)), 2) if entry and sl and entry != sl else 0
-            score = len([c for c in conditions if 'COT' in c or 'RSI' in c]) + 1
             
             signals.append({
                 'pair': pair,
                 'action': action,
                 'score': score,
-                'confidence': 'STRONG' if score >= 3 else 'MODERATE',
+                'confidence': 'ALTA' if score >= 3 else 'MEDIA',
                 'entry': entry,
                 'tp': tp,
                 'sl': sl,
@@ -339,7 +218,8 @@ def generate_signals(cot_data, retail_data, tech_data, thresholds):
                 'retail_short': retail['short'],
                 'cot_bias': cot['bias'],
                 'rsi': tech['rsi'],
-                'conditions': ' + '.join(conditions)
+                'conditions': ' + '.join(conditions),
+                'price': tech['price']
             })
     
     return sorted(signals, key=lambda x: x['score'], reverse=True)
@@ -360,138 +240,63 @@ try:
         tech_data = get_technical_data(forex_pairs, rsi_period)
         signals = generate_signals(cot_data, retail_data, tech_data, thresholds)
     
-    # Metriche
+    # Metriche con st.metric nativo
     col1, col2, col3, col4 = st.columns(4)
     
+    triple = len([s for s in signals if s['score'] >= 3])
+    double = len([s for s in signals if 2 <= s['score'] < 3])
+    buys = len([s for s in signals if s['action'] == 'BUY'])
+    sells = len([s for s in signals if s['action'] == 'SELL'])
+    
     with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3 style="color: #10b981;">{len([s for s in signals if s['score'] >= 3])}</h3>
-            <p>🔴🔴🔴 Triple Conferma</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
+        st.metric("🔴🔴🔴 Triple Conferma", triple)
     with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3 style="color: #f59e0b;">{len([s for s in signals if 2 <= s['score'] < 3])}</h3>
-            <p>🟡🟡 Doppia Conferma</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
+        st.metric("🟡🟡 Doppia Conferma", double)
     with col3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3 style="color: #667eea;">{len(signals)}</h3>
-            <p>📊 Segnali Totali</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
+        st.metric("📊 Segnali Totali", len(signals))
     with col4:
-        buys = len([s for s in signals if s['action'] == 'BUY'])
-        sells = len([s for s in signals if s['action'] == 'SELL'])
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3 style="color: #10b981;">BUY {buys}</h3>
-            <p style="color: #ef4444;">SELL {sells}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric("🟢 BUY", buys, delta=f"🔴 SELL {sells}")
     
     st.markdown("---")
     st.markdown("## 🎯 Segnali di Trading")
     
     if signals:
-        for signal in signals:
-            card_class = "signal-card-strong" if signal['score'] >= 3 else "signal-card-moderate"
-            badge_class = "badge-strong" if signal['confidence'] == 'STRONG' else "badge-moderate"
-            
-            # Determina classe RSI
-            if signal['rsi'] > rsi_overbought:
-                rsi_class = "rsi-overbought"
-                rsi_text = f"🔥 RSI {signal['rsi']} (Overbought)"
-            elif signal['rsi'] < rsi_oversold:
-                rsi_class = "rsi-oversold"
-                rsi_text = f"💚 RSI {signal['rsi']} (Oversold)"
-            else:
-                rsi_class = "rsi-neutral"
-                rsi_text = f"⚪ RSI {signal['rsi']} (Neutrale)"
-            
-            st.markdown(f"""
-            <div class="signal-card {card_class}">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
-                    <div>
-                        <h2 style="margin: 0; color: white; font-size: 1.5rem;">{signal['pair']}</h2>
-                        <span class="badge {badge_class}">{signal['confidence']}</span>
-                    </div>
-                    <div style="text-align: right;">
-                        <h1 style="margin: 0; color: {'#10b981' if signal['action'] == 'BUY' else '#ef4444'}; font-size: 2rem;">
-                            {signal['action']}
-                        </h1>
-                    </div>
-                </div>
+        for i, signal in enumerate(signals):
+            # Usiamo expander per ogni segnale (più pulito)
+            with st.expander(f"{'🔴' if signal['action'] == 'SELL' else '🟢'} {signal['pair']} - {signal['action']} - Score: {signal['score']}/3", expanded=i==0):
                 
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; padding: 0.75rem; background: rgba(0,0,0,0.3); border-radius: 10px;">
-                    <div style="text-align: center;">
-                        <small style="color: #94a3b8;">🏦 COT</small>
-                        <div style="font-weight: bold; color: {'#10b981' if signal['cot_bias'] == 'bullish' else '#ef4444' if signal['cot_bias'] == 'bearish' else '#f59e0b'}">
-                            {signal['cot_bias'].upper()}
-                        </div>
-                    </div>
-                    <div style="text-align: center;">
-                        <small style="color: #94a3b8;">👥 Retail</small>
-                        <div>
-                            <span style="color: #10b981;">L:{signal['retail_long']}%</span> 
-                            <span style="color: #ef4444;">S:{signal['retail_short']}%</span>
-                        </div>
-                    </div>
-                    <div style="text-align: center;">
-                        <small style="color: #94a3b8;">📊 RSI ({rsi_period})</small>
-                        <div style="font-weight: bold; color: white;">{signal['rsi']}</div>
-                        <div><span class="rsi-badge {rsi_class}">{rsi_text}</span></div>
-                    </div>
-                </div>
+                # Colonne per info principali
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    st.markdown(f"**🏦 COT:** {signal['cot_bias'].upper()}")
+                with c2:
+                    st.markdown(f"**👥 Retail:** LONG {signal['retail_long']}% / SHORT {signal['retail_short']}%")
+                with c3:
+                    rsi_color = "🔴" if signal['rsi'] > rsi_overbought else "🟢" if signal['rsi'] < rsi_oversold else "⚪"
+                    st.markdown(f"**📊 RSI ({rsi_period}):** {rsi_color} {signal['rsi']}")
                 
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-top: 0.75rem;">
-                    <div>
-                        <small style="color: #94a3b8;">Entry</small>
-                        <br/>
-                        <strong style="color: white;">{format_price(signal['pair'], signal['entry'])}</strong>
-                    </div>
-                    <div>
-                        <small style="color: #94a3b8;">Take Profit</small>
-                        <br/>
-                        <strong style="color: #10b981;">{format_price(signal['pair'], signal['tp'])}</strong>
-                    </div>
-                    <div>
-                        <small style="color: #94a3b8;">Stop Loss</small>
-                        <br/>
-                        <strong style="color: #ef4444;">{format_price(signal['pair'], signal['sl'])}</strong>
-                    </div>
-                    <div>
-                        <small style="color: #94a3b8;">R:R Ratio</small>
-                        <br/>
-                        <strong style="color: white;">1:{signal['rr']}</strong>
-                    </div>
-                    <div>
-                        <small style="color: #94a3b8;">Score</small>
-                        <br/>
-                        <strong style="color: #f59e0b;">{signal['score']}/3</strong>
-                    </div>
-                </div>
+                st.markdown(f"**✅ Condizioni:** {signal['conditions']}")
+                st.markdown(f"**🎯 Confidenza:** {signal['confidence']}")
                 
-                <div style="margin-top: 0.75rem; font-size: 11px; color: #64748b; text-align: center;">
-                    {signal['conditions']}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                st.markdown("---")
+                
+                # Dettagli trade
+                col_entry, col_tp, col_sl, col_rr = st.columns(4)
+                with col_entry:
+                    st.metric("Entry", format_price(signal['pair'], signal['entry']))
+                with col_tp:
+                    st.metric("Take Profit", format_price(signal['pair'], signal['tp']), delta="TP")
+                with col_sl:
+                    st.metric("Stop Loss", format_price(signal['pair'], signal['sl']), delta="SL", delta_color="inverse")
+                with col_rr:
+                    st.metric("R:R Ratio", f"1:{signal['rr']}")
     else:
-        st.info("ℹ️ Nessun segnale con le soglie attuali. Prova ad abbassare le soglie per più segnali.")
+        st.info("ℹ️ Nessun segnale con le soglie attuali. Prova ad abbassare le soglie.")
     
     st.markdown("---")
-    
-    # Tabella riassuntiva
     st.markdown("## 📊 Tabella Riassuntiva")
     
+    # Tabella con pandas styling
     summary_data = []
     for pair in forex_pairs:
         cot = cot_data.get(pair, {})
@@ -500,22 +305,19 @@ try:
         
         rsi = tech.get('rsi', 50)
         
-        # Determina segnale potenziale
-        potential_signal = "⚪ ATTESA"
         if retail.get('long', 0) > retail_long_threshold and cot.get('bias') == 'bearish' and rsi > rsi_overbought:
-            potential_signal = "🔴 SELL (Tripla)"
+            signal_text = "🔴 SELL (Tripla)"
         elif retail.get('long', 0) > retail_long_threshold and cot.get('bias') == 'bearish':
-            potential_signal = "🟡 SELL (Doppia)"
+            signal_text = "🟡 SELL (Doppia)"
         elif retail.get('short', 0) > retail_short_threshold and cot.get('bias') == 'bullish' and rsi < rsi_oversold:
-            potential_signal = "🟢 BUY (Tripla)"
+            signal_text = "🟢 BUY (Tripla)"
         elif retail.get('short', 0) > retail_short_threshold and cot.get('bias') == 'bullish':
-            potential_signal = "🟡 BUY (Doppia)"
+            signal_text = "🟡 BUY (Doppia)"
+        else:
+            signal_text = "⚪ ATTESA"
         
         price = tech.get('price')
-        if price:
-            price_str = f"{price:.2f}" if pair == 'XAUUSD' else f"{price:.5f}"
-        else:
-            price_str = "N/A"
+        price_str = format_price(pair, price)
         
         summary_data.append({
             'Coppia': pair,
@@ -523,34 +325,63 @@ try:
             f'RSI({rsi_period})': rsi,
             'Retail L/S': f"{retail.get('long', 0)}% / {retail.get('short', 0)}%",
             'COT': cot.get('bias', 'N/A').upper(),
-            'Segnale': potential_signal
+            'Segnale': signal_text
         })
     
-    df_summary = pd.DataFrame(summary_data)
-    st.dataframe(df_summary, use_container_width=True, hide_index=True)
+    df = pd.DataFrame(summary_data)
+    st.dataframe(df, use_container_width=True, hide_index=True)
     
-    # Legenda
-    st.markdown(f"""
-    <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 10px; margin-top: 1rem;">
-        <h4 style="color: white;">📖 Legenda Segnali</h4>
-        <table style="width: 100%; color: #cbd5e1;">
-            <tr><td>🔴 SELL (Tripla)</td><td>Retail LONG >{retail_long_threshold}% + COT Bearish + RSI >{rsi_overbought}</td></tr>
-            <tr><td>🟢 BUY (Tripla)</td><td>Retail SHORT >{retail_short_threshold}% + COT Bullish + RSI &lt;{rsi_oversold}</td></tr>
-            <tr><td>🟡 Doppia</td><td>Solo 2 condizioni su 3 sono verificate</td></tr>
-            <tr><td>⚪ ATTESA</td><td>Condizioni non ancora mature</td></tr>
-        </table>
-    </div>
-    """, unsafe_allow_html=True)
+    # Grafico RSI per le principali coppie
+    st.markdown("---")
+    st.markdown("## 📈 RSI - Situazione Attuale")
+    
+    # Crea grafico a barre RSI
+    rsi_data = []
+    pairs_for_chart = [p for p in forex_pairs if p in tech_data]
+    for pair in pairs_for_chart:
+        rsi_data.append({
+            'Coppia': pair,
+            'RSI': tech_data[pair]['rsi'],
+            'Soglia OB': rsi_overbought,
+            'Soglia OS': rsi_oversold
+        })
+    
+    rsi_df = pd.DataFrame(rsi_data)
+    
+    fig = go.Figure()
+    
+    # Aggiungi barre RSI
+    fig.add_trace(go.Bar(
+        x=rsi_df['Coppia'],
+        y=rsi_df['RSI'],
+        name='RSI',
+        marker_color=['#ef4444' if x > rsi_overbought else '#10b981' if x < rsi_oversold else '#667eea' for x in rsi_df['RSI']],
+        text=rsi_df['RSI'],
+        textposition='auto',
+        textfont=dict(color='white')
+    ))
+    
+    # Linee soglie
+    fig.add_hline(y=rsi_overbought, line_dash="dash", line_color="#ef4444", annotation_text=f"Overbought ({rsi_overbought})")
+    fig.add_hline(y=rsi_oversold, line_dash="dash", line_color="#10b981", annotation_text=f"Oversold ({rsi_oversold})")
+    fig.add_hline(y=50, line_dash="dot", line_color="#64748b")
+    
+    fig.update_layout(
+        title="RSI per Coppia",
+        yaxis_title="RSI",
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font_color='#e2e8f0',
+        height=400
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
     
     # Footer
     st.markdown("---")
-    st.markdown(f"""
-    <div style="text-align: center; color: #64748b; font-size: 11px; padding: 1rem;">
-        <p>⚠️ Disclaimer: I segnali sono generati automaticamente. Non costituiscono consulenza finanziaria.</p>
-        <p>🔄 Ultimo aggiornamento: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.caption(f"⚠️ Disclaimer: Solo a scopo educativo. I segnali sono generati automaticamente.")
+    st.caption(f"🔄 Ultimo aggiornamento: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
 
 except Exception as e:
     st.error(f"❌ Errore: {str(e)}")
-    st.info("🔄 Ricarica la pagina o attendi qualche minuto.")
+    st.info("🔄 Ricarica la pagina")
