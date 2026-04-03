@@ -1,0 +1,12 @@
+flask==3.0.0
+flask-cors==4.0.0
+requests==2.31.0
+beautifulsoup4==4.12.2
+pandas==2.1.3
+numpy==1.24.3
+python-dotenv==1.0.0
+fake-useragent==1.4.0
+yfinance==0.2.33
+cftc-cot==0.1.0
+plotly==5.18.0
+redis==5.0.1  # opzionale per caching avanzato
