@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forex Sentiment Pro - Segnali COT & Myfxbook</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                <span>Forex<span class="highlight">Sentinel</span></span>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analisi</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-history"></i>
+                    <span>Backtest</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>Impostazioni</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <i class="fas fa-circle" id="statusLed"></i>
+                    <span id="statusText">Online</span>
+                </div>
+                <button class="refresh-btn" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Aggiorna</span>
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h1>Dashboard Trading</h1>
+                    <p>Segnali basati su COT + Sentiment Retail</p>
+                </div>
+                <div class="last-update">
+                    <i class="far fa-clock"></i>
+                    <span id="lastUpdate">Caricamento...</span>
+                </div>
+            </header>
+            
+            <!-- Stats Cards -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalSignals">0</h3>
+                        <p>Segnali Attivi</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="buySignals">0</h3>
+                        <p>Acquisti</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="sellSignals">0</h3>
+                        <p>Vendite</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="fas fa-chart-simple"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="avgConfidence">0%</h3>
+                        <p>Confidenza Media</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Signals Table -->
+            <div class="signals-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-bullhorn"></i> Segnali di Trading</h2>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" data-filter="all">Tutti</button>
+                        <button class="filter-btn" data-filter="HIGH">Alta Confidenza</button>
+                        <button class="filter-btn" data-filter="MEDIUM">Media Confidenza</button>
+                        <button class="filter-btn" data-filter="LOW">Bassa Confidenza</button>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="signals-table" id="signalsTable">
+                        <thead>
+                            <tr>
+                                <th>Coppia</th>
+                                <th>Azione</th>
+                                <th>Confidenza</th>
+                                <th>Entry</th>
+                                <th>TP1</th>
+                                <th>TP2</th>
+                                <th>SL</th>
+                                <th>R:R</th>
+                                <th>Motivazione</th>
+                            </tr>
+                        </thead>
+                        <tbody id="signalsTableBody">
+                            <tr>
+                                <td colspan="9" class="loading-row">
+                                    <i class="fas fa-spinner fa-spin"></i> Caricamento segnali...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Sentiment Analysis Section -->
+            <div class="sentiment-grid">
+                <div class="card cot-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-building"></i> COT Analysis</h3>
+                        <span class="badge">Istituzionale</span>
+                    </div>
+                    <div class="card-body" id="cotContent">
+                        <div class="loading-small">
+                            <i class="fas fa-spinner fa-spin"></i> Caricamento...
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card retail-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-users"></i> Retail Sentiment</h3>
+                        <span class="badge">Myfxbook</span>
+                    </div>
+                    <div class="card-body" id="retailContent">
+                        <div class="loading-small">
+                            <i class="fas fa-spinner fa-spin"></i> Caricamento...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
