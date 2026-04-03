@@ -18,7 +18,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS personalizzato con contrasto migliorato
+# CSS personalizzato con contrasto ottimale
 st.markdown("""
 <style>
     .stApp {
@@ -92,45 +92,64 @@ st.markdown("""
         color: #f87171;
         border: 1px solid rgba(239, 68, 68, 0.5);
     }
-    /* Miglioramento leggibilità sidebar */
-    .sidebar .sidebar-content {
+    /* SIDEBAR - Leggibilità ottimale */
+    section[data-testid="stSidebar"] {
         background: rgba(19, 24, 58, 0.95);
     }
-    /* Miglioramento testo nelle tabelle */
+    section[data-testid="stSidebar"] .stMarkdown {
+        color: #cbd5e1 !important;
+    }
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #a5b4fc !important;
+        font-weight: 600;
+    }
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] li,
+    section[data-testid="stSidebar"] span {
+        color: #cbd5e1 !important;
+    }
+    section[data-testid="stSidebar"] .stButton button {
+        background: #4f46e5;
+        color: white;
+        font-weight: 500;
+        border: none;
+    }
+    section[data-testid="stSidebar"] .stButton button:hover {
+        background: #6366f1;
+    }
+    /* Tabelle */
     .stDataFrame {
-        color: #ffffff !important;
+        color: #e2e8f0 !important;
     }
     .stDataFrame td, .stDataFrame th {
-        color: #ffffff !important;
+        color: #e2e8f0 !important;
     }
-    /* Miglioramento testo nei grafici */
+    /* Grafici */
     .js-plotly-plot .main-svg {
         background: transparent !important;
     }
-    /* Testo nei card dettaglio */
+    /* Card dettaglio */
     .signal-card small {
-        color: #cbd5e1 !important;
+        color: #94a3b8 !important;
         font-weight: 500;
     }
     .signal-card strong {
-        color: #ffffff !important;
+        color: #f1f5f9 !important;
     }
-    /* Sidebar text */
-    .css-1d391kg, .css-163ttbj, .stMarkdown {
-        color: #e2e8f0 !important;
-    }
-    /* Miglioramento info box */
+    /* Info box */
     .stAlert {
         background: rgba(26, 31, 62, 0.9) !important;
-        color: #ffffff !important;
+        color: #e2e8f0 !important;
     }
-    /* Miglioramento testo nelle metriche */
+    /* Metriche */
     div[data-testid="stMetricValue"] {
-        color: #ffffff !important;
+        color: #f1f5f9 !important;
         font-weight: 700;
     }
     div[data-testid="stMetricLabel"] {
-        color: #cbd5e1 !important;
+        color: #94a3b8 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -147,7 +166,7 @@ st.markdown("""
 with st.sidebar:
     st.markdown("## ⚙️ Configurazione")
     
-    # Coppie forex da monitorare - AGGIUNTO XAUUSD
+    # Coppie forex da monitorare con XAUUSD
     forex_pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCAD', 'NZDUSD', 'USDCHF', 'XAUUSD']
     
     st.markdown("### 📈 Coppie monitorate")
@@ -182,10 +201,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 🏆 Oro (XAUUSD)")
     st.markdown("""
-    L'oro è incluso come:
-    - Asset rifugio per eccellenza
-    - Correlazione inversa con USD
-    - Volatilità controllata
+    L'oro è incluso come asset rifugio
     """)
 
 # Funzioni di caching
@@ -223,9 +239,8 @@ def get_current_prices(pairs):
     prices = {}
     for pair in pairs:
         try:
-            # Gestione speciale per XAUUSD (Gold)
             if pair == 'XAUUSD':
-                symbol = 'GC=F'  # Gold futures su Yahoo Finance
+                symbol = 'GC=F'
             else:
                 symbol = f"{pair}=X"
             
@@ -245,7 +260,6 @@ def get_current_prices(pairs):
 def calculate_pivot_levels(pair, current_price):
     """Calcola pivot points"""
     try:
-        # Gestione speciale per XAUUSD
         if pair == 'XAUUSD':
             symbol = 'GC=F'
         else:
@@ -264,7 +278,6 @@ def calculate_pivot_levels(pair, current_price):
             r1 = 2 * pivot - low
             s1 = 2 * pivot - high
             
-            # Arrotondamento appropriato per l'oro
             decimals = 2 if pair == 'XAUUSD' else 5
             
             return {
@@ -276,7 +289,6 @@ def calculate_pivot_levels(pair, current_price):
     except:
         pass
     
-    # Fallback
     if current_price:
         decimals = 2 if pair == 'XAUUSD' else 5
         multiplier = 0.005 if pair == 'XAUUSD' else 0.005
@@ -304,7 +316,6 @@ def generate_signals(cot_data, retail_data, prices, levels):
         score = 0
         reasons = []
         
-        # COT score (max 40)
         if cot['bias'] == 'bullish':
             if cot['strength'] == 'strong':
                 score += 40
@@ -320,7 +331,6 @@ def generate_signals(cot_data, retail_data, prices, levels):
                 score += 25
                 reasons.append("COT moderatamente ribassista")
         
-        # Retail contrarian score (max 40)
         if retail['signal'] == 'buy':
             if retail['extremity'] == 'extreme':
                 score += 40
@@ -336,7 +346,6 @@ def generate_signals(cot_data, retail_data, prices, levels):
                 score += 25
                 reasons.append("Retail long")
         
-        # Technical score (max 20)
         if price and level:
             if price < level['s1']:
                 score += 20
@@ -345,7 +354,6 @@ def generate_signals(cot_data, retail_data, prices, levels):
                 score += 20
                 reasons.append("Sopra resistenza chiave")
         
-        # Determina azione
         action = None
         if cot['bias'] == 'bullish' and retail['signal'] == 'buy':
             action = 'BUY'
@@ -400,7 +408,6 @@ try:
         
         signals = generate_signals(cot_data, retail_data, prices, levels)
     
-    # Metriche
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -439,14 +446,11 @@ try:
         """, unsafe_allow_html=True)
     
     st.markdown("---")
-    
-    # Tabella segnali
     st.markdown("## 🎯 Segnali di Trading")
     
     if signals:
         df_signals = pd.DataFrame(signals)
         
-        # Formattazione appropriata per XAUUSD
         def format_price(pair, value):
             if value is None:
                 return "N/A"
@@ -457,7 +461,6 @@ try:
         df_signals['tp'] = df_signals.apply(lambda x: format_price(x['pair'], x['tp']), axis=1)
         df_signals['sl'] = df_signals.apply(lambda x: format_price(x['pair'], x['sl']), axis=1)
         
-        # Versione CORRETTA per pandas 2.x
         def color_action(val):
             if val == 'BUY':
                 return 'background-color: rgba(16, 185, 129, 0.3); color: #34d399; font-weight: bold;'
@@ -471,14 +474,11 @@ try:
         
         st.dataframe(styled_df, use_container_width=True, height=400)
         
-        # Dettaglio segnali
         st.markdown("### 📋 Dettaglio Segnali")
         
         for signal in signals[:5]:
             card_class = "signal-card signal-buy" if signal['action'] == 'BUY' else "signal-card signal-sell"
             badge_class = f"badge badge-{signal['confidence'].lower()}"
-            
-            # Formattazione prezzi per XAUUSD
             decimals = 2 if signal['pair'] == 'XAUUSD' else 5
             
             st.markdown(f"""
@@ -497,27 +497,27 @@ try:
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
                     <div>
-                        <small style="color: #cbd5e1;">Entry</small>
+                        <small style="color: #94a3b8;">Entry</small>
                         <br/>
-                        <strong style="color: #ffffff;">{signal['entry']:.{decimals}f}</strong>
+                        <strong style="color: #f1f5f9;">{signal['entry']:.{decimals}f}</strong>
                     </div>
                     <div>
-                        <small style="color: #cbd5e1;">Take Profit</small>
+                        <small style="color: #94a3b8;">Take Profit</small>
                         <br/>
                         <strong style="color: #10b981;">{signal['tp']:.{decimals}f}</strong>
                     </div>
                     <div>
-                        <small style="color: #cbd5e1;">Stop Loss</small>
+                        <small style="color: #94a3b8;">Stop Loss</small>
                         <br/>
                         <strong style="color: #ef4444;">{signal['sl']:.{decimals}f}</strong>
                     </div>
                     <div>
-                        <small style="color: #cbd5e1;">R:R Ratio</small>
+                        <small style="color: #94a3b8;">R:R Ratio</small>
                         <br/>
-                        <strong style="color: #ffffff;">1:{signal['rr']}</strong>
+                        <strong style="color: #f1f5f9;">1:{signal['rr']}</strong>
                     </div>
                 </div>
-                <div style="margin-top: 0.75rem; font-size: 12px; color: #cbd5e1;">
+                <div style="margin-top: 0.75rem; font-size: 12px; color: #94a3b8;">
                     ℹ️ {signal['reasons']}
                 </div>
             </div>
@@ -527,7 +527,6 @@ try:
     
     st.markdown("---")
     
-    # Due colonne per COT e Retail
     col1, col2 = st.columns(2)
     
     with col1:
@@ -544,7 +543,6 @@ try:
         ])
         st.dataframe(cot_df, use_container_width=True, hide_index=True)
         
-        # Grafico COT
         fig_cot = go.Figure()
         for pair in list(cot_data.keys())[:5]:
             fig_cot.add_trace(go.Bar(
@@ -582,7 +580,6 @@ try:
         ])
         st.dataframe(retail_df, use_container_width=True, hide_index=True)
         
-        # Grafico retail
         fig_retail = go.Figure()
         for pair in list(retail_data.keys())[:5]:
             fig_retail.add_trace(go.Bar(
@@ -606,15 +603,12 @@ try:
         )
         st.plotly_chart(fig_retail, use_container_width=True)
     
-    # Footer
     st.markdown("---")
     st.markdown(f"""
-    <div style="text-align: center; color: #cbd5e1; font-size: 12px; padding: 1rem;">
-        <p>⚠️ <strong>Disclaimer:</strong> I segnali sono generati automaticamente. Non costituiscono consulenza finanziaria. 
-        Il trading forex e metalli comporta rischi significativi. Opera sempre con consapevolezza.</p>
+    <div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 1rem;">
+        <p>⚠️ <strong>Disclaimer:</strong> I segnali sono generati automaticamente. Non costituiscono consulenza finanziaria.</p>
         <p>📊 Dati: CFTC COT Report | Myfxbook Sentiment | Yahoo Finance</p>
         <p>🔄 Ultimo aggiornamento: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}</p>
-        <p style="color: #667eea;">🏆 XAUUSD (Oro) incluso nell'analisi</p>
     </div>
     """, unsafe_allow_html=True)
 
