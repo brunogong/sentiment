@@ -49,7 +49,7 @@ def main():
         cot = get_cot(pair)
 
         # 2) OHLC (1 sola chiamata Finnhub/TwelveData)
-        symbol = TWELVEDATA_MAPPING[pair]
+        symbol = FINNHUB_MAPPING[pair]
         df = get_ohlc(symbol, "60")  # 60 = 1H
 
         # 3) RSI multi‑TF locale
