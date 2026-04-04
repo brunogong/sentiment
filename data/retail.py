@@ -1,22 +1,24 @@
 import requests
 
-def get_retail_sentiment():
-    """
-    Restituisce sentiment retail reale (o mock).
-    """
+def myfxbook_login(email, password):
+    url = f"https://www.myfxbook.com/api/login.json?email={email}&password={password}"
+    return requests.get(url).json()["session"]
+
+
+def get_retail_sentiment(session):
     try:
-        # Placeholder MyFxBook API
-        # url = "https://www.myfxbook.com/api/get-community-outlook.json"
-        # data = requests.get(url).json()
+        url = f"https://www.myfxbook.com/api/get-community-outlook.json?session={session}"
+        data = requests.get(url, timeout=5).json()
 
-        mock = {
-            'EURUSD': {'long': 42, 'short': 58},
-            'GBPUSD': {'long': 35, 'short': 65},
-            'USDJPY': {'long': 72, 'short': 28},
-            'XAUUSD': {'long': 32, 'short': 68},
-        }
+        sentiment = {}
+        for item in data["symbols"]:
+            pair = item["name"]
+            sentiment[pair] = {
+                "long": float(item["longPercentage"]),
+                "short": float(item["shortPercentage"])
+            }
 
-        return mock
+        return sentiment
 
     except:
         return {}
