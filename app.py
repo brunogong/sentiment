@@ -57,7 +57,9 @@ def main():
         atr = get_atr_from_df(df)
 
         # 5) Generazione segnale
-        signal = generate_signal(pair, cot, retail[pair], rsi, atr, thresholds)
+        signal = generate_signal(pair, cot, retail[pair], rsi, atr, df)
+render_signal_card(signal)
+
 
         # 6) Rendering UI
         render_signal_card(signal)
