@@ -2,42 +2,48 @@ import requests
 import pandas as pd
 import streamlit as st
 
-API_KEY = st.secrets["finnhub_api_key"]
-
-BASE = "https://finnhub.io/api/v1"
+API_KEY = st.secrets["alpha_vantage_key"]
 
 
-def get_ohlc(symbol, resolution="60", candles=500):
+def get_ohlc(symbol_tuple, interval="60min"):
     """
-    resolution:
-        1 = 1m
-        5 = 5m
-        15 = 15m
-        30 = 30m
-        60 = 1h
-        D = 1d
+    Ottiene OHLC Forex da Alpha Vantage.
+    symbol_tuple = ("EUR", "USD")
     """
-    url = f"{BASE}/forex/candle?symbol={symbol}&resolution={resolution}&count={candles}&token={API_KEY}"
+
+    base, quote = symbol_tuple
+
+    url = (
+        "https://www.alphavantage.co/query?"
+        f"function=FX_INTRADAY&from_symbol={base}&to_symbol={quote}"
+        f"&interval={interval}&outputsize=full&apikey={API_KEY}"
+    )
 
     try:
-        data = requests.get(url, timeout=5).json()
+        data = requests.get(url, timeout=10).json()
 
-        if data.get("s") != "ok":
-            st.warning(f"⚠️ Nessun OHLC Finnhub per {symbol}.")
+        if "Time Series FX" not in data:
+            st.warning(f"⚠️ Nessun OHLC Alpha Vantage per {base}{quote}.")
             return pd.DataFrame()
 
-        df = pd.DataFrame({
-            "datetime": pd.to_datetime(data["t"], unit="s"),
-            "open": data["o"],
-            "high": data["h"],
-            "low": data["l"],
-            "close": data["c"]
-        })
+        ts = data["Time Series FX (60min)"]
 
+        df = pd.DataFrame([
+            {
+                "datetime": pd.to_datetime(t),
+                "open": float(v["1. open"]),
+                "high": float(v["2. high"]),
+                "low": float(v["3. low"]),
+                "close": float(v["4. close"])
+            }
+            for t, v in ts.items()
+        ])
+
+        df = df.sort_values("datetime").reset_index(drop=True)
         return df
 
     except Exception as e:
-        st.warning(f"⚠️ Errore OHLC Finnhub {symbol}: {e}")
+        st.warning(f"⚠️ Errore Alpha Vantage: {e}")
         return pd.DataFrame()
 
 
