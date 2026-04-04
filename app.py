@@ -41,7 +41,8 @@ def main():
         # 2) OHLC da Finnhub
         symbol = FINNHUB_MAPPING[pair]
         df = get_ohlc(symbol, "60")  # 60 = 1H
-        st.write("DEBUG OHLC:", df)
+        st.write("DEBUG API KEY:", st.secrets.get("finnhub_api_key"))
+
 
 
         # 3) RSI multi‑TF locale
