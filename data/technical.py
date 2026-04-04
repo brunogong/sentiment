@@ -2,36 +2,42 @@ import requests
 import pandas as pd
 import streamlit as st
 
-API_KEY = st.secrets["twelvedata_api_key"]
+API_KEY = st.secrets["finnhub_api_key"]
 
-def get_ohlc(symbol, interval="1h", outputsize=500):
-    url = (
-        f"https://api.twelvedata.com/time_series"
-        f"?symbol={symbol}&interval={interval}&outputsize={outputsize}&apikey={API_KEY}"
-    )
+BASE = "https://finnhub.io/api/v1"
+
+
+def get_ohlc(symbol, resolution="60", candles=500):
+    """
+    resolution:
+        1 = 1m
+        5 = 5m
+        15 = 15m
+        30 = 30m
+        60 = 1h
+        D = 1d
+    """
+    url = f"{BASE}/forex/candle?symbol={symbol}&resolution={resolution}&count={candles}&token={API_KEY}"
 
     try:
         data = requests.get(url, timeout=5).json()
 
-        if "values" not in data:
-            st.warning(f"⚠️ Nessun OHLC per {symbol}.")
+        if data.get("s") != "ok":
+            st.warning(f"⚠️ Nessun OHLC Finnhub per {symbol}.")
             return pd.DataFrame()
 
-        df = pd.DataFrame(data["values"])
-        df["datetime"] = pd.to_datetime(df["datetime"])
-        df = df.sort_values("datetime")
-
-        df = df.astype({
-            "open": float,
-            "high": float,
-            "low": float,
-            "close": float
+        df = pd.DataFrame({
+            "datetime": pd.to_datetime(data["t"], unit="s"),
+            "open": data["o"],
+            "high": data["h"],
+            "low": data["l"],
+            "close": data["c"]
         })
 
         return df
 
     except Exception as e:
-        st.warning(f"⚠️ Errore OHLC {symbol}: {e}")
+        st.warning(f"⚠️ Errore OHLC Finnhub {symbol}: {e}")
         return pd.DataFrame()
 
 
