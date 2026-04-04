@@ -6,8 +6,8 @@ COT_MAPPING = {
 }
 
 TWELVEDATA_MAPPING = {
-    "EURUSD": "EUR/USD",
-    "GBPUSD": "GBP/USD",
-    "USDJPY": "USD/JPY",
-    "XAUUSD": "XAU/USD"
+    "EURUSD": "OANDA:EUR_USD",
+    "GBPUSD": "OANDA:GBP_USD",
+    "USDJPY": "OANDA:USD_JPY",
+    "XAUUSD": "OANDA:XAU_USD"
 }
