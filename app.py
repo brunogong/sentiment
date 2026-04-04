@@ -4,7 +4,8 @@ from data.cot import get_cot
 from data.retail import myfxbook_login, get_retail_sentiment
 from data.technical import get_ohlc, get_rsi_multi_tf_from_df
 from data.volatility import get_atr_from_df
-from utils.mapping import TWELVEDATA_MAPPING
+from utils.mapping import FINNHUB_MAPPING symbol = FINNHUB_MAPPING[pair]
+
 
 from logic.signals import generate_signal
 from ui.dashboard import render_signal_card
