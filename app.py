@@ -14,7 +14,7 @@ from ui.styles import load_styles
 def main():
     load_styles()
 
-    st.title("📊 Forex Sentinel PRO — Dati Reali (Versione Ottimizzata)")
+    st.title("📊 Forex Sentinel PRO — Dati Reali (Versione Ottimizzata + AI)")
 
     # --- LOGIN MYFXBOOK ---
     email = st.secrets["myfxbook_email"]
@@ -46,9 +46,9 @@ def main():
         # 1) COT reale
         cot = get_cot(pair)
 
-        # 2) OHLC (1 sola chiamata TwelveData)
+        # 2) OHLC (1 sola chiamata Finnhub/TwelveData)
         symbol = TWELVEDATA_MAPPING[pair]
-        df = get_ohlc(symbol, "1h")
+        df = get_ohlc(symbol, "60")  # 60 = 1H
 
         # 3) RSI multi‑TF locale
         rsi = get_rsi_multi_tf_from_df(df)
@@ -56,10 +56,8 @@ def main():
         # 4) ATR locale
         atr = get_atr_from_df(df)
 
-        # 5) Generazione segnale
+        # 5) Generazione segnale AI-driven
         signal = generate_signal(pair, cot, retail[pair], rsi, atr, df)
-render_signal_card(signal)
-
 
         # 6) Rendering UI
         render_signal_card(signal)
