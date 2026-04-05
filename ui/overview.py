@@ -4,10 +4,10 @@ import pandas as pd
 
 def color_score(val):
     if val >= 65:
-        return "background-color: #0f5132; color: white;"   # verde
+        return "background-color: #0f5132; color: white;"
     elif val <= 35:
-        return "background-color: #842029; color: white;"   # rosso
-    return "background-color: #343a40; color: white;"       # neutro
+        return "background-color: #842029; color: white;"
+    return "background-color: #343a40; color: white;"
 
 
 def color_bias(val):
@@ -19,6 +19,16 @@ def color_bias(val):
 
 
 def render_market_overview(signals):
+    # Evita crash se i segnali sono vuoti
+    signals = [
+        s for s in signals
+        if isinstance(s, dict) and "score" in s and "pair" in s
+    ]
+
+    if not signals:
+        st.warning("⚠ Nessun segnale valido disponibile.")
+        return
+
     st.subheader("🌍 Market Overview — Heatmap AI")
 
     rows = []
