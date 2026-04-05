@@ -6,6 +6,31 @@ from utils.mapping import MASSIVE_SYMBOLS
 API_KEY = st.secrets["massive_api_key"]
 
 
+# ---------------------------------------------------------
+# DEBUG MASSIVE — MOSTRA RISPOSTA RAW
+# ---------------------------------------------------------
+def debug_massive():
+    url = (
+        f"https://api.massive.app/v1/forex/ohlc?"
+        f"symbol=EURUSD&interval=1m&apiKey={API_KEY}"
+    )
+
+    st.subheader("🔍 DEBUG Massive API")
+
+    st.write("URL chiamato:", url)
+
+    try:
+        r = requests.get(url, timeout=10)
+        st.write("Status code:", r.status_code)
+        st.write("Raw response (primi 500 caratteri):")
+        st.code(r.text[:500])
+    except Exception as e:
+        st.error(f"Errore durante la chiamata Massive: {e}")
+
+
+# ---------------------------------------------------------
+# MASSIVE OHLC (con caching)
+# ---------------------------------------------------------
 @st.cache_data(ttl=60)
 def load_all_ohlc():
     data = {}
@@ -46,9 +71,9 @@ def get_ohlc(pair):
     return all_data.get(pair, pd.DataFrame())
 
 
-# -------------------------
+# ---------------------------------------------------------
 # RSI MULTI-TF
-# -------------------------
+# ---------------------------------------------------------
 def calc_rsi(series, period=14):
     delta = series.diff()
     gain = delta.where(delta > 0, 0).rolling(period).mean()
