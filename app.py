@@ -16,7 +16,6 @@ def main():
 
     st.title("📊 Forex Sentinel PRO — AI Signals (Massive Edition)")
 
-    # --- LOGIN MYFXBOOK ---
     email = st.secrets["myfxbook_email"]
     password = st.secrets["myfxbook_password"]
 
@@ -25,15 +24,12 @@ def main():
 
     pairs = ["EURUSD", "GBPUSD", "USDJPY", "XAUUSD"]
 
-    # Fallback retail neutro se manca una coppia
     for pair in pairs:
         if pair not in retail:
-            st.warning(f"⚠ MyFxBook non ha dati per {pair}. Uso valori neutri.")
             retail[pair] = {"long": 50, "short": 50}
 
     signals_list = []
 
-    # --- CICLO PRINCIPALE: genera tutti i segnali ---
     for pair in pairs:
         cot = get_cot(pair)
         df = get_ohlc(pair)
@@ -43,10 +39,8 @@ def main():
         signal = generate_signal(pair, cot, retail[pair], rsi, atr, df)
         signals_list.append(signal)
 
-    # --- MARKET OVERVIEW (HEATMAP) ---
     render_market_overview(signals_list)
 
-    # --- CARD DETTAGLIATE PER OGNI COPPIA ---
     for signal in signals_list:
         render_signal_card(signal)
 
