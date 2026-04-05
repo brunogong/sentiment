@@ -1,106 +1,116 @@
-def generate_signal(pair, cot, retail, rsi, atr, df):
-    """
-    Sistema AI-driven con score 0–100.
-    """
-
-    score = 0
-    conditions = []
-
-    # -------------------------
-    # 1. TREND FILTER (4H + 1D)
-    # -------------------------
-    try:
-        ema50 = df["close"].ewm(span=50).mean().iloc[-1]
-        ema200 = df["close"].ewm(span=200).mean().iloc[-1]
-        price = df["close"].iloc[-1]
-
-        trend_bias = None
-
-        if price > ema200:
-            score += 20
-            trend_bias = "bullish"
-            conditions.append("Trend macro rialzista")
-        else:
-            score += 10
-            trend_bias = "bearish"
-            conditions.append("Trend macro ribassista")
-
-        if ema50 > ema200:
-            score += 10
-            conditions.append("Trend operativo forte")
-        else:
-            score += 5
-            conditions.append("Trend operativo debole")
-
-    except:
-        conditions.append("Trend non disponibile")
+import numpy as np
 
 
-    # -------------------------
-    # 2. MOMENTUM FILTER (1H)
-    # -------------------------
-    try:
-        roc = (df["close"].iloc[-1] - df["close"].iloc[-5]) / df["close"].iloc[-5] * 100
+# ---------------------------------------------------------
+# TREND (EMA 50/200)
+# ---------------------------------------------------------
+def get_trend(df):
+    if df.empty or len(df) < 200:
+        return "neutral"
 
-        if rsi["rsi_1h"] > 50 and roc > 0:
-            score += 20
-            conditions.append("Momentum positivo")
-        elif rsi["rsi_1h"] < 50 and roc < 0:
-            score += 20
-            conditions.append("Momentum negativo")
-        else:
-            score += 5
-            conditions.append("Momentum neutro")
+    df["ema50"] = df["close"].ewm(span=50).mean()
+    df["ema200"] = df["close"].ewm(span=200).mean()
 
-    except:
-        conditions.append("Momentum non disponibile")
-
-
-    # -------------------------
-    # 3. VOLATILITY REGIME
-    # -------------------------
-    if atr > 0:
-        if atr < df["close"].iloc[-1] * 0.002:
-            score += 15
-            conditions.append("Volatilità bassa (regime pulito)")
-        else:
-            score += 5
-            conditions.append("Volatilità alta (regime instabile)")
+    if df["ema50"].iloc[-1] > df["ema200"].iloc[-1]:
+        return "bullish"
+    elif df["ema50"].iloc[-1] < df["ema200"].iloc[-1]:
+        return "bearish"
     else:
-        conditions.append("ATR non disponibile")
+        return "neutral"
 
 
-    # -------------------------
-    # 4. RETAIL SENTIMENT
-    # -------------------------
+# ---------------------------------------------------------
+# MOMENTUM (ROC 14)
+# ---------------------------------------------------------
+def get_momentum(df, period=14):
+    if df.empty or len(df) < period + 1:
+        return "neutral"
+
+    roc = (df["close"].iloc[-1] - df["close"].iloc[-period]) / df["close"].iloc[-period] * 100
+
+    if roc > 0.2:
+        return "bullish"
+    elif roc < -0.2:
+        return "bearish"
+    else:
+        return "neutral"
+
+
+# ---------------------------------------------------------
+# COT BIAS (VERSIONE PRO)
+# ---------------------------------------------------------
+def get_cot_bias(cot):
+    if cot["sentiment"] > 55:
+        return "bullish"
+    elif cot["sentiment"] < 45:
+        return "bearish"
+    else:
+        return "neutral"
+
+
+# ---------------------------------------------------------
+# SCORE AI-DRIVEN 0–100
+# ---------------------------------------------------------
+def compute_score(trend, momentum, cot_bias, retail, rsi, atr):
+    score = 50  # base neutra
+
+    # Trend
+    if trend == "bullish":
+        score += 10
+    elif trend == "bearish":
+        score -= 10
+
+    # Momentum
+    if momentum == "bullish":
+        score += 10
+    elif momentum == "bearish":
+        score -= 10
+
+    # COT istituzionale
+    if cot_bias == "bullish":
+        score += 15
+    elif cot_bias == "bearish":
+        score -= 15
+
+    # Retail sentiment (contrarian)
     if retail["long"] > 60:
+        score -= 10
+    elif retail["short"] > 60:
         score += 10
-        conditions.append("Retail LONG → preferenza SELL")
-    if retail["short"] > 60:
-        score += 10
-        conditions.append("Retail SHORT → preferenza BUY")
+
+    # RSI multi‑TF
+    if rsi["rsi_1h"] < 30:
+        score += 5
+    elif rsi["rsi_1h"] > 70:
+        score -= 5
+
+    if rsi["rsi_4h"] < 30:
+        score += 5
+    elif rsi["rsi_4h"] > 70:
+        score -= 5
+
+    # ATR (volatilità)
+    if atr > 0:
+        score += 5
+
+    return max(0, min(100, score))
 
 
-    # -------------------------
-    # 5. COT BIAS
-    # -------------------------
-    if cot["bias"] == "bullish":
-        score += 15
-        conditions.append("COT bullish")
-    elif cot["bias"] == "bearish":
-        score += 15
-        conditions.append("COT bearish")
+# ---------------------------------------------------------
+# GENERATORE DI SEGNALE
+# ---------------------------------------------------------
+def generate_signal(pair, cot, retail, rsi, atr, df):
+    trend = get_trend(df)
+    momentum = get_momentum(df)
+    cot_bias = get_cot_bias(cot)
 
+    score = compute_score(trend, momentum, cot_bias, retail, rsi, atr)
 
-    # -------------------------
-    # DECISIONE FINALE
-    # -------------------------
-    if score >= 80:
-        action = "BUY" if trend_bias == "bullish" else "SELL"
-    elif score >= 60:
-        action = "BUY" if trend_bias == "bullish" else "SELL"
-    elif score >= 40:
-        action = "WEAK"
+    # Decisione finale
+    if score >= 65:
+        action = "BUY"
+    elif score <= 35:
+        action = "SELL"
     else:
         action = "WAIT"
 
@@ -108,5 +118,11 @@ def generate_signal(pair, cot, retail, rsi, atr, df):
         "pair": pair,
         "action": action,
         "score": score,
-        "conditions": conditions
+        "trend": trend,
+        "momentum": momentum,
+        "cot_bias": cot_bias,
+        "cot_sentiment": cot["sentiment"],
+        "retail": retail,
+        "rsi": rsi,
+        "atr": atr,
     }
