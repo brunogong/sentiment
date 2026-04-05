@@ -11,7 +11,7 @@ API_KEY = st.secrets["massive_api_key"]
 # ---------------------------------------------------------
 def debug_massive():
     url = (
-        f"https://api.massive.app/v1/forex/ohlc?"
+        f"https://api.massive.app/v3/forex/candles?"
         f"symbol=EURUSD&interval=1m&apiKey={API_KEY}"
     )
 
@@ -29,7 +29,7 @@ def debug_massive():
 
 
 # ---------------------------------------------------------
-# MASSIVE OHLC (con caching)
+# MASSIVE OHLC (v3) — con caching
 # ---------------------------------------------------------
 @st.cache_data(ttl=60)
 def load_all_ohlc():
@@ -38,7 +38,7 @@ def load_all_ohlc():
     for pair, symbol in MASSIVE_SYMBOLS.items():
 
         url = (
-            f"https://api.massive.app/v1/forex/ohlc?"
+            f"https://api.massive.app/v3/forex/candles?"
             f"symbol={symbol}&interval=1m&apiKey={API_KEY}"
         )
 
@@ -46,13 +46,23 @@ def load_all_ohlc():
             response = requests.get(url, timeout=10)
             raw = response.json()
 
-            if "data" not in raw or not raw["data"]:
+            # Massive v3 → i dati sono in "candles"
+            if "candles" not in raw or not raw["candles"]:
                 st.warning(f"⚠ Massive non ha restituito OHLC per {pair}.")
                 data[pair] = pd.DataFrame()
                 continue
 
-            df = pd.DataFrame(raw["data"])
+            df = pd.DataFrame(raw["candles"])
+
+            # Massive usa timestamp in secondi
             df["datetime"] = pd.to_datetime(df["timestamp"], unit="s")
+
+            df = df.rename(columns={
+                "o": "open",
+                "h": "high",
+                "l": "low",
+                "c": "close"
+            })
 
             df = df[["datetime", "open", "high", "low", "close"]]
             df = df.sort_values("datetime").reset_index(drop=True)
