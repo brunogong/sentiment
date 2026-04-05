@@ -2,7 +2,7 @@ import streamlit as st
 
 from data.cot import get_cot
 from data.retail import myfxbook_login, get_retail_sentiment
-from data.technical import get_ohlc, get_rsi_multi_tf_from_df, debug_massive
+from data.technical import get_ohlc, get_rsi_multi_tf_from_df, debug_eodhd
 from data.volatility import get_atr_from_df
 
 from logic.signals import generate_signal
@@ -14,17 +14,13 @@ from ui.styles import load_styles
 def main():
     load_styles()
 
-    st.title("📊 Forex Sentinel PRO — AI Signals (Massive Edition)")
+    st.title("📊 Forex Sentinel PRO — AI Signals (EODHD Edition)")
 
-    # ---------------------------------------------------------
-    # DEBUG MASSIVE API
-    # ---------------------------------------------------------
-    debug_massive()
+    # DEBUG API
+    debug_eodhd()
     st.divider()
 
-    # ---------------------------------------------------------
-    # RETAIL SENTIMENT
-    # ---------------------------------------------------------
+    # Retail sentiment
     email = st.secrets["myfxbook_email"]
     password = st.secrets["myfxbook_password"]
 
@@ -37,9 +33,6 @@ def main():
         if pair not in retail:
             retail[pair] = {"long": 50, "short": 50}
 
-    # ---------------------------------------------------------
-    # GENERAZIONE SEGNALI
-    # ---------------------------------------------------------
     signals_list = []
 
     for pair in pairs:
@@ -51,14 +44,8 @@ def main():
         signal = generate_signal(pair, cot, retail[pair], rsi, atr, df)
         signals_list.append(signal)
 
-    # ---------------------------------------------------------
-    # HEATMAP (robusta)
-    # ---------------------------------------------------------
     render_market_overview(signals_list)
 
-    # ---------------------------------------------------------
-    # CARDS DETTAGLIATE
-    # ---------------------------------------------------------
     for signal in signals_list:
         render_signal_card(signal)
 
