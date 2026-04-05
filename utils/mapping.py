@@ -1,9 +1,23 @@
 # utils/mapping.py
 
-# Mappatura logica delle coppie usate nell'app
+# Coppie usate nell'app
 PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "XAUUSD"]
 
-# (Opzionale) Mappatura per Alpha Vantage, se vuoi tenerlo come fallback
+
+# -----------------------------
+# MASSIVE (provider OHLC)
+# -----------------------------
+MASSIVE_SYMBOLS = {
+    "EURUSD": "EURUSD",
+    "GBPUSD": "GBPUSD",
+    "USDJPY": "USDJPY",
+    "XAUUSD": "XAUUSD",
+}
+
+
+# -----------------------------
+# ALPHA VANTAGE (fallback)
+# -----------------------------
 ALPHA_MAPPING = {
     "EURUSD": ("EUR", "USD"),
     "GBPUSD": ("GBP", "USD"),
@@ -11,11 +25,35 @@ ALPHA_MAPPING = {
     "XAUUSD": ("XAU", "USD"),
 }
 
-# Mappatura simboli per Massive
-# Se Massive usa lo stesso formato simbolo (es. "EURUSD"), basta questo:
-MASSIVE_SYMBOLS = {
-    "EURUSD": "EURUSD",
-    "GBPUSD": "GBPUSD",
-    "USDJPY": "USDJPY",
-    "XAUUSD": "XAUUSD",
+
+# -----------------------------
+# COT MAPPING (CFTC)
+# -----------------------------
+# Ogni coppia Forex viene collegata al future corretto
+# per estrarre il Commitment of Traders (COT)
+COT_MAPPING = {
+    "EURUSD": {
+        "market": "EURO FX",
+        "code": "099741",
+        "symbol": "6E",
+        "exchange": "CME",
+    },
+    "GBPUSD": {
+        "market": "BRITISH POUND STERLING",
+        "code": "096742",
+        "symbol": "6B",
+        "exchange": "CME",
+    },
+    "USDJPY": {
+        "market": "JAPANESE YEN",
+        "code": "097741",
+        "symbol": "6J",
+        "exchange": "CME",
+    },
+    "XAUUSD": {
+        "market": "GOLD",
+        "code": "088691",
+        "symbol": "GC",
+        "exchange": "COMEX",
+    },
 }
