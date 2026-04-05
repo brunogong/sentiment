@@ -1,88 +1,78 @@
 import requests
 import pandas as pd
 import streamlit as st
-from utils.mapping import MASSIVE_SYMBOLS
 
-API_KEY = st.secrets["massive_api_key"]
+API_KEY = st.secrets["eodhd_api_key"]
+
+# Mappa simboli Forex per EODHD
+EODHD_SYMBOLS = {
+    "EURUSD": "EURUSD.FOREX",
+    "GBPUSD": "GBPUSD.FOREX",
+    "USDJPY": "USDJPY.FOREX",
+    "XAUUSD": "XAUUSD.FOREX",
+}
 
 
 # ---------------------------------------------------------
-# DEBUG MASSIVE — MOSTRA RISPOSTA RAW
+# DEBUG EODHD
 # ---------------------------------------------------------
-def debug_massive():
+def debug_eodhd():
     url = (
-        f"https://api.massive.app/v3/forex/candles?"
-        f"symbol=EURUSD&interval=1m&apiKey={API_KEY}"
+        f"https://eodhd.com/api/intraday/EURUSD.FOREX"
+        f"?interval=1m&api_token={API_KEY}&fmt=json"
     )
 
-    st.subheader("🔍 DEBUG Massive API")
-
+    st.subheader("🔍 DEBUG EODHD API")
     st.write("URL chiamato:", url)
 
     try:
         r = requests.get(url, timeout=10)
         st.write("Status code:", r.status_code)
-        st.write("Raw response (primi 500 caratteri):")
         st.code(r.text[:500])
     except Exception as e:
-        st.error(f"Errore durante la chiamata Massive: {e}")
+        st.error(f"Errore EODHD: {e}")
 
 
 # ---------------------------------------------------------
-# MASSIVE OHLC (v3) — con caching
+# OHLC MULTI-TIMEFRAME
 # ---------------------------------------------------------
-@st.cache_data(ttl=60)
-def load_all_ohlc():
-    data = {}
+def fetch_ohlc(pair, interval="1m"):
+    symbol = EODHD_SYMBOLS[pair]
 
-    for pair, symbol in MASSIVE_SYMBOLS.items():
+    url = (
+        f"https://eodhd.com/api/intraday/{symbol}"
+        f"?interval={interval}&api_token={API_KEY}&fmt=json"
+    )
 
-        url = (
-            f"https://api.massive.app/v3/forex/candles?"
-            f"symbol={symbol}&interval=1m&apiKey={API_KEY}"
-        )
+    try:
+        r = requests.get(url, timeout=10)
+        data = r.json()
 
-        try:
-            response = requests.get(url, timeout=10)
-            raw = response.json()
+        if not isinstance(data, list) or len(data) == 0:
+            return pd.DataFrame()
 
-            # Massive v3 → i dati sono in "candles"
-            if "candles" not in raw or not raw["candles"]:
-                st.warning(f"⚠ Massive non ha restituito OHLC per {pair}.")
-                data[pair] = pd.DataFrame()
-                continue
+        df = pd.DataFrame(data)
+        df["datetime"] = pd.to_datetime(df["datetime"])
+        df = df.rename(columns={
+            "open": "open",
+            "high": "high",
+            "low": "low",
+            "close": "close"
+        })
 
-            df = pd.DataFrame(raw["candles"])
+        return df[["datetime", "open", "high", "low", "close"]]
 
-            # Massive usa timestamp in secondi
-            df["datetime"] = pd.to_datetime(df["timestamp"], unit="s")
-
-            df = df.rename(columns={
-                "o": "open",
-                "h": "high",
-                "l": "low",
-                "c": "close"
-            })
-
-            df = df[["datetime", "open", "high", "low", "close"]]
-            df = df.sort_values("datetime").reset_index(drop=True)
-
-            data[pair] = df
-
-        except Exception as e:
-            st.error(f"❌ Errore Massive per {pair}: {e}")
-            data[pair] = pd.DataFrame()
-
-    return data
+    except Exception as e:
+        st.error(f"Errore OHLC {pair}: {e}")
+        return pd.DataFrame()
 
 
 def get_ohlc(pair):
-    all_data = load_all_ohlc()
-    return all_data.get(pair, pd.DataFrame())
+    return fetch_ohlc(pair, interval="1m")
 
 
 # ---------------------------------------------------------
-# RSI MULTI-TF
+# RSI
 # ---------------------------------------------------------
 def calc_rsi(series, period=14):
     delta = series.diff()
